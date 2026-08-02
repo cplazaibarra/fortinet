@@ -1210,6 +1210,7 @@ def api_dashboard_status():
                 'title': 'RAMA 3: Ruptura por Impulso Alcista',
                 'passed': rama3_passed,
                 'items': [
+                    {'label': 'MACD Line por encima de Signal', 'val_str': f"{macd_c0:.2f} vs {sig_c0:.2f}", 'passed': r3_c1},
                     {'label': 'Precio por encima de EMA9 y EMA21', 'val_str': f"${close_c0:.2f} > ${ema9_c0:.2f}", 'passed': r3_c2},
                     {'label': 'Vela Verde Impulso (> +0.3%)', 'val_str': f"Cierre: ${close_c0:.2f} vs Ap: ${open_c0:.2f}", 'passed': r3_c3},
                     {'label': 'RSI (14) > 48.0', 'val_str': f"{rsi_c0:.2f} vs 48.0", 'passed': r3_c4}
