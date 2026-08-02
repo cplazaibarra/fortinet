@@ -641,26 +641,27 @@
                 const branches = data.entry_branches || {};
                 const r1 = branches.rama1 || { passed: false, items: [] };
                 const r2 = branches.rama2 || { passed: false, items: [] };
-                const ml = branches.ml_filter || { passed: false, confidence: 50.0, threshold: 47.0 };
+                const r3 = branches.rama3 || { passed: false, items: [] };
+                const ml = branches.ml_filter || { passed: false, confidence: 50.0, threshold: 45.0 };
 
                 let html = `
                 <!-- Banner Explicativo de la Regla Global de Entrada -->
                 <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1.25rem; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
                     <div>
                         <span style="color: var(--text-muted);">Estructura de Compra:</span>
-                        <strong style="color: #38bdf8; margin-left: 0.4rem;">( RAMA 1  <span style="color: #f59e0b;">ó</span>  RAMA 2 )  <span style="color: #a855f7;">y</span>  FILTRO IA</strong>
+                        <strong style="color: #38bdf8; margin-left: 0.4rem;">( RAMA 1  <span style="color: #f59e0b;">ó</span>  RAMA 2  <span style="color: #10b981;">ó</span>  RAMA 3 )  <span style="color: #a855f7;">y</span>  FILTRO IA</strong>
                     </div>
                     <div style="font-size: 0.8rem; color: var(--text-muted);">
-                        Basta con que se cumpla <strong>RAMA 1 O RAMA 2</strong> + el <strong>Filtro ML</strong> para ejecutar la compra.
+                        Basta con que se cumpla <strong>CUALQUIERA DE LAS 3 RAMAS</strong> + el <strong>Filtro ML</strong> para ejecutar la compra.
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem; margin-bottom: 1.25rem;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin-bottom: 1.25rem;">
                     <!-- TARJETA RAMA 1 -->
-                    <div style="border: 1px solid ${r1.passed ? '#10b981' : 'rgba(255,255,255,0.08)'}; background: ${r1.passed ? 'rgba(16, 185, 129, 0.08)' : 'rgba(30, 41, 59, 0.4)'}; border-radius: 10px; padding: 1rem;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 0.5rem;">
-                            <div style="font-weight: bold; color: #fff; font-size: 0.95rem;">
-                                <i class="fa-solid fa-rocket" style="color: #38bdf8;"></i> RAMA 1: Cruce Inicial
+                    <div style="border: 1px solid ${r1.passed ? '#10b981' : 'rgba(56, 189, 248, 0.3)'}; background: ${r1.passed ? 'rgba(16, 185, 129, 0.08)' : 'rgba(30, 41, 59, 0.4)'}; border-radius: 10px; padding: 1rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; border-bottom: 1px solid rgba(56, 189, 248, 0.2); padding-bottom: 0.5rem;">
+                            <div style="font-weight: bold; color: #38bdf8; font-size: 0.92rem;">
+                                <i class="fa-solid fa-rocket"></i> RAMA 1: Cruce Inicial
                             </div>
                             ${r1.passed ? 
                                 `<span class="badge badge-success" style="font-weight: bold; font-size: 0.78rem; padding: 0.25rem 0.55rem;"><i class="fa-solid fa-circle-check"></i> CUMPLIDA</span>` : 
@@ -680,10 +681,10 @@
                     </div>
 
                     <!-- TARJETA RAMA 2 -->
-                    <div style="border: 1px solid ${r2.passed ? '#10b981' : 'rgba(255,255,255,0.08)'}; background: ${r2.passed ? 'rgba(16, 185, 129, 0.08)' : 'rgba(30, 41, 59, 0.4)'}; border-radius: 10px; padding: 1rem;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 0.5rem;">
-                            <div style="font-weight: bold; color: #fff; font-size: 0.95rem;">
-                                <i class="fa-solid fa-rotate-right" style="color: #f59e0b;"></i> RAMA 2: Re-Entrada por Impulso
+                    <div style="border: 1px solid ${r2.passed ? '#10b981' : 'rgba(245, 158, 11, 0.3)'}; background: ${r2.passed ? 'rgba(16, 185, 129, 0.08)' : 'rgba(30, 41, 59, 0.4)'}; border-radius: 10px; padding: 1rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; border-bottom: 1px solid rgba(245, 158, 11, 0.2); padding-bottom: 0.5rem;">
+                            <div style="font-weight: bold; color: #f59e0b; font-size: 0.92rem;">
+                                <i class="fa-solid fa-rotate-right"></i> RAMA 2: Re-Entrada Impulso
                             </div>
                             ${r2.passed ? 
                                 `<span class="badge badge-success" style="font-weight: bold; font-size: 0.78rem; padding: 0.25rem 0.55rem;"><i class="fa-solid fa-circle-check"></i> CUMPLIDA</span>` : 
@@ -692,6 +693,29 @@
                         </div>
                         <div style="font-size: 0.82rem; display: flex; flex-direction: column; gap: 0.65rem;">
                             ${r2.items.map(it => `
+                                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(15, 23, 42, 0.5); padding: 0.55rem 0.75rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.04);">
+                                    <span style="color: #cbd5e1;">${it.label}</span>
+                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <span style="font-family: monospace; font-size: 0.8rem; color: #94a3b8;">${it.val_str}</span>
+                                        ${it.passed ? '<i class="fa-solid fa-circle-check" style="color: #10b981;"></i>' : '<i class="fa-solid fa-circle-xmark" style="color: #64748b;"></i>'}
+                                    </div>
+                                </div>`).join('')}
+                        </div>
+                    </div>
+
+                    <!-- TARJETA RAMA 3 -->
+                    <div style="border: 1px solid ${r3.passed ? '#10b981' : 'rgba(16, 185, 129, 0.3)'}; background: ${r3.passed ? 'rgba(16, 185, 129, 0.08)' : 'rgba(30, 41, 59, 0.4)'}; border-radius: 10px; padding: 1rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; border-bottom: 1px solid rgba(16, 185, 129, 0.2); padding-bottom: 0.5rem;">
+                            <div style="font-weight: bold; color: #10b981; font-size: 0.92rem;">
+                                <i class="fa-solid fa-bolt"></i> RAMA 3: Ruptura Impulso
+                            </div>
+                            ${r3.passed ? 
+                                `<span class="badge badge-success" style="font-weight: bold; font-size: 0.78rem; padding: 0.25rem 0.55rem;"><i class="fa-solid fa-circle-check"></i> CUMPLIDA</span>` : 
+                                `<span class="badge badge-secondary" style="background: rgba(100, 116, 139, 0.2); color: #cbd5e1; font-size: 0.78rem; padding: 0.25rem 0.55rem;"><i class="fa-solid fa-circle-xmark"></i> NO ACTIVADA</span>`
+                            }
+                        </div>
+                        <div style="font-size: 0.82rem; display: flex; flex-direction: column; gap: 0.65rem;">
+                            ${r3.items.map(it => `
                                 <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(15, 23, 42, 0.5); padding: 0.55rem 0.75rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.04);">
                                     <span style="color: #cbd5e1;">${it.label}</span>
                                     <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -725,7 +749,7 @@
 
                 contentArea.innerHTML = html;
 
-                const technicalPassed = r1.passed || r2.passed;
+                const technicalPassed = r1.passed || r2.passed || r3.passed;
                 const buyActivated = technicalPassed && ml.passed;
 
                 if (buyActivated) {

@@ -1170,6 +1170,8 @@ def api_dashboard_status():
         rsi_c1 = get_variable_value(c1, 'rsi14', klines=klines[:-1]) or 50
         ema9_c0 = get_variable_value(c0, 'ema9', klines=klines) or 0
         ema21_c0 = get_variable_value(c0, 'ema21', klines=klines) or 0
+        close_c0 = get_variable_value(c0, 'close', klines=klines) or 0
+        open_c0 = get_variable_value(c0, 'open', klines=klines) or 0
 
         r1_c1 = (macd_c1 <= sig_c1) and (macd_c0 > sig_c0)
         r1_c2 = rsi_c0 > 45.0
