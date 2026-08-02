@@ -170,13 +170,13 @@ def evaluate_rules(klines, rules, is_exit=False):
         # Disparador 1: Cruce Inicial MACD Line por encima de Signal + RSI > 45
         trig1 = (macd_c1 <= sig_c1) and (macd_c0 > sig_c0) and (rsi_c0 > 45.0)
 
-        # Disparador 2: Re-Entrada en Tendencia Alcista (MACD > Signal + EMA9 > EMA21 + RSI Cruza por encima de 45)
-        trig2 = (macd_c0 > sig_c0) and (ema9_c0 > ema21_c0) and (rsi_c1 <= 45.0) and (rsi_c0 > 45.0)
+        # Disparador 2: Re-Entrada por Impulso en Tendencia Alcista (MACD > Signal + EMA9 > EMA21 + RSI Cruza por encima de 50.0)
+        trig2 = (macd_c0 > sig_c0) and (ema9_c0 > ema21_c0) and (rsi_c1 <= 50.0) and (rsi_c0 > 50.0)
 
         if trig1:
             return True, "Disparador 1: Cruce Inicial MACD + RSI > 45"
         elif trig2:
-            return True, "Disparador 2: Re-Entrada por Impulso en Tendencia (MACD > Signal + EMA9 > EMA21 + RSI Cruza 45)"
+            return True, "Disparador 2: Re-Entrada por Impulso en Tendencia (MACD > Signal + EMA9 > EMA21 + RSI Cruza 50)"
             
         passed = all(results) and len(results) > 0
         reason = f"Reglas de Entrada [{', '.join(matched_descriptions)}]" if passed else "No se cumplen las reglas de entrada"
