@@ -70,7 +70,7 @@
 <div class="card">
     <div class="card-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
         <div>
-            <span>⚡ Lógica de Entrada Doble Disparador (RAMA 1 ó RAMA 2)</span>
+            <span>⚡ Lógica de Entrada Triple Disparador (RAMA 1 ó RAMA 2 ó RAMA 3)</span>
             <div style="font-size: 0.83rem; color: var(--text-muted); font-weight: normal; margin-top: 0.2rem;">
                 Configuración de la Estrategia de Entrada Principal (Perfil 1).
             </div>
@@ -84,18 +84,18 @@
     <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 10px; padding: 1rem 1.25rem; margin-top: 1rem; margin-bottom: 1.5rem;">
         <div style="font-weight: bold; color: #e9d5ff; font-size: 0.95rem; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.5rem;">
             <i class="fa-solid fa-code-branch" style="color: #a855f7;"></i> Conector Lógico de Compra:
-            <span style="color: #38bdf8;">( RAMA 1  <span style="color: #f59e0b;">ó</span>  RAMA 2 )  <span style="color: #a855f7;">y</span>  FILTRO MACHINE LEARNING</span>
+            <span style="color: #38bdf8;">( RAMA 1  <span style="color: #f59e0b;">ó</span>  RAMA 2  <span style="color: #10b981;">ó</span>  RAMA 3 )  <span style="color: #a855f7;">y</span>  FILTRO MACHINE LEARNING</span>
         </div>
         <div style="font-size: 0.83rem; color: #cbd5e1; line-height: 1.4;">
-            El bot comprará si se detecta un <strong>Cruce Inicial (RAMA 1)</strong> O si el mercado está en un <strong>Rally y confirma Re-Entrada (RAMA 2)</strong>, siempre que el <strong>Filtro ML</strong> otorgue la certeza requerida.
+            El bot comprará si se detecta un <strong>Cruce Inicial (RAMA 1)</strong>, una <strong>Re-Entrada por Continuación (RAMA 2)</strong> O una <strong>Ruptura de Impulso Alcista (RAMA 3)</strong>, siempre que el <strong>Filtro ML (45%)</strong> lo apruebe.
         </div>
     </div>
 
-    <!-- Cajas explicativas de RAMA 1 y RAMA 2 -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem;">
+    <!-- Cajas explicativas de RAMA 1, RAMA 2 y RAMA 3 -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem;">
         <div style="background: rgba(56, 189, 248, 0.06); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 10px; padding: 1.1rem;">
             <div style="font-weight: bold; color: #38bdf8; font-size: 0.95rem; margin-bottom: 0.6rem; display: flex; align-items: center; gap: 0.5rem;">
-                <i class="fa-solid fa-rocket"></i> RAMA 1: Entrada por Cruce Inicial
+                <i class="fa-solid fa-rocket"></i> RAMA 1: Cruce Inicial
             </div>
             <div style="font-size: 0.82rem; color: #cbd5e1; line-height: 1.5;">
                 • <strong>MACD Line</strong> Cruza por encima de <strong>MACD Signal</strong><br>
@@ -105,12 +105,23 @@
 
         <div style="background: rgba(245, 158, 11, 0.06); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 10px; padding: 1.1rem;">
             <div style="font-weight: bold; color: #f59e0b; font-size: 0.95rem; margin-bottom: 0.6rem; display: flex; align-items: center; gap: 0.5rem;">
-                <i class="fa-solid fa-rotate-right"></i> RAMA 2: Re-Entrada por Impulso
+                <i class="fa-solid fa-rotate-right"></i> RAMA 2: Re-Entrada Impulso
             </div>
             <div style="font-size: 0.82rem; color: #cbd5e1; line-height: 1.5;">
-                • <strong>MACD Line</strong> > <strong>MACD Signal</strong> (Tendencia alcista activa)<br>
-                • <strong>EMA 9</strong> > <strong>EMA 21</strong> (Alineación de medias)<br>
-                • <strong>RSI (14)</strong> Cruza por encima de <strong>50.0</strong> (Rebote/Continuación)
+                • <strong>MACD Line</strong> > <strong>MACD Signal</strong> (Tendencia activa)<br>
+                • <strong>EMA 9</strong> > <strong>EMA 21</strong> (Alineación medias)<br>
+                • <strong>RSI (14)</strong> Cruza por encima de <strong>50.0</strong>
+            </div>
+        </div>
+
+        <div style="background: rgba(16, 185, 129, 0.06); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 10px; padding: 1.1rem;">
+            <div style="font-weight: bold; color: #10b981; font-size: 0.95rem; margin-bottom: 0.6rem; display: flex; align-items: center; gap: 0.5rem;">
+                <i class="fa-solid fa-bolt"></i> RAMA 3: Ruptura Impulso
+            </div>
+            <div style="font-size: 0.82rem; color: #cbd5e1; line-height: 1.5;">
+                • <strong>MACD Line</strong> > <strong>MACD Signal</strong><br>
+                • <strong>Precio Cierre</strong> > <strong>EMA 9</strong> > <strong>EMA 21</strong><br>
+                • <strong>Vela Verde Impulso (+0.3%)</strong> & <strong>RSI</strong> > <strong>48.0</strong>
             </div>
         </div>
     </div>
@@ -144,10 +155,23 @@
             </div>
         </div>
 
+        <!-- SECCIÓN DE FORMULARIO RAMA 3 -->
+        <div style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 10px; padding: 1.25rem; margin-bottom: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid rgba(16, 185, 129, 0.2); padding-bottom: 0.5rem;">
+                <div style="font-weight: bold; color: #10b981; font-size: 1rem;">
+                    <i class="fa-solid fa-bolt"></i> RAMA 3: Reglas de Ruptura por Impulso Alcista
+                </div>
+                <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid #10b981;">Disparador 3</span>
+            </div>
+            <div id="rama3-rules-container">
+                <!-- Reglas de la Rama 3 -->
+            </div>
+        </div>
+
         <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem;">
             <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Cancelar</a>
             <button type="submit" class="btn btn-primary">
-                <i class="fa-solid fa-floppy-disk"></i> Guardar Estrategia de Entrada (RAMA 1 y 2)
+                <i class="fa-solid fa-floppy-disk"></i> Guardar Estrategia de Entrada (RAMA 1, 2 y 3)
             </button>
         </div>
     </form>
@@ -270,7 +294,7 @@
         });
     }
 
-    // Inicializar explícitamente RAMA 1 y RAMA 2
+    // Inicializar explícitamente RAMA 1, RAMA 2 y RAMA 3
     const defaultRama1 = [
         { var1: 'macd', op: 'cross_above', compare_type: 'indicator', var2: 'macd_signal' },
         { var1: 'rsi14', op: 'gt', compare_type: 'value', val2: 45.0 }
@@ -282,8 +306,16 @@
         { var1: 'rsi14', op: 'cross_above', compare_type: 'value', val2: 50.0 }
     ];
 
+    const defaultRama3 = [
+        { var1: 'macd', op: 'gt', compare_type: 'indicator', var2: 'macd_signal' },
+        { var1: 'close', op: 'gt', compare_type: 'indicator', var2: 'ema9' },
+        { var1: 'ema9', op: 'gt', compare_type: 'indicator', var2: 'ema21' },
+        { var1: 'rsi14', op: 'gt', compare_type: 'value', val2: 48.0 }
+    ];
+
     defaultRama1.forEach(rule => createRuleRow(rule, 'rama1-rules-container'));
     defaultRama2.forEach(rule => createRuleRow(rule, 'rama2-rules-container'));
+    defaultRama3.forEach(rule => createRuleRow(rule, 'rama3-rules-container'));
 
     document.getElementById('add-rule-btn').addEventListener('click', () => createRuleRow());
 
