@@ -146,6 +146,7 @@
             <button onclick="applySimPreset('1m')" data-preset="1m" class="btn btn-secondary btn-sim-preset" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;">1 Mes</button>
             <button onclick="applySimPreset('6m')" data-preset="6m" class="btn btn-secondary btn-sim-preset" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;">6 Meses</button>
             <button onclick="applySimPreset('1y')" data-preset="1y" class="btn btn-secondary btn-sim-preset" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;">1 Año</button>
+            <button onclick="applySimPreset('2y')" data-preset="2y" class="btn btn-secondary btn-sim-preset" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;">2 Años</button>
             <button onclick="applySimPreset('all')" data-preset="all" class="btn btn-secondary btn-sim-preset" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;">Todo (3 Años) ⚡</button>
         </div>
     </div>
@@ -395,12 +396,13 @@
             startTs = nowMs - (180 * 24 * 60 * 60 * 1000);
         } else if (presetKey === '1y') {
             startTs = nowMs - (365 * 24 * 60 * 60 * 1000);
+        } else if (presetKey === '2y') {
+            startTs = nowMs - (2 * 365 * 24 * 60 * 60 * 1000);
         } else if (presetKey === 'all') {
-            // Para 2 años: leer toda la tabla pre-calculada sin filtro de fechas (más rápido)
             const startElem = document.getElementById('filter-start-date');
             const endElem = document.getElementById('filter-end-date');
-            const twoYearsAgo = new Date(nowMs - (2 * 365 * 24 * 60 * 60 * 1000));
-            if (startElem) startElem.value = formatDateForInput(twoYearsAgo);
+            const threeYearsAgo = new Date(nowMs - (3 * 365 * 24 * 60 * 60 * 1000));
+            if (startElem) startElem.value = formatDateForInput(threeYearsAgo);
             if (endElem) endElem.value = formatDateForInput(new Date(nowMs));
             loadSimulationData(1, '');
             return;
