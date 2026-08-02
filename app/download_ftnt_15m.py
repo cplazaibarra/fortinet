@@ -204,7 +204,7 @@ def insert_to_postgres(df: pd.DataFrame):
     tuples = [tuple(x) for x in df[columns].to_numpy()]
 
     insert_query = f"""
-    INSERT INTO ohlcv_15m ({', '.join(columns)})
+    INSERT INTO candles_15m ({', '.join(columns)})
     VALUES %s
     ON CONFLICT (symbol, timestamp) DO UPDATE SET
         open = EXCLUDED.open,
