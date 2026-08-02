@@ -42,6 +42,8 @@ services:
       - PYTHONPATH=/app
     ports:
       - "4444:5050"
+    volumes:
+      - ./app:/app/app
     networks:
       - apps-net
 
