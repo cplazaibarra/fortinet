@@ -68,19 +68,58 @@
 </div>
 
 <div class="card">
-    <div class="card-title">
-        <span>Reglas de Entrada (Compra)</span>
-        <button id="add-rule-btn" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
-            <i class="fa-solid fa-plus"></i> Añadir Regla
+    <div class="card-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <span>⚡ Lógica de Entrada Doble Disparador (RAMA 1 ó RAMA 2)</span>
+            <div style="font-size: 0.83rem; color: var(--text-muted); font-weight: normal; margin-top: 0.2rem;">
+                Configuración de la Estrategia de Entrada Principal (Perfil 1).
+            </div>
+        </div>
+        <button id="add-rule-btn" class="btn btn-secondary" style="padding: 0.45rem 0.9rem; font-size: 0.85rem;">
+            <i class="fa-solid fa-plus"></i> Añadir Regla Personalizada
         </button>
     </div>
     
-    <div style="margin-top: 1rem; color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">
-        Todas las condiciones añadidas se evaluarán mediante un conector lógico <strong>AND</strong> (deben cumplirse todas simultáneamente para ejecutar la compra).
+    <!-- Banner de Lógica Global -->
+    <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 10px; padding: 1rem 1.25rem; margin-top: 1rem; margin-bottom: 1.5rem;">
+        <div style="font-weight: bold; color: #e9d5ff; font-size: 0.95rem; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fa-solid fa-code-branch" style="color: #a855f7;"></i> Conector Lógico de Compra:
+            <span style="color: #38bdf8;">( RAMA 1  <span style="color: #f59e0b;">ó</span>  RAMA 2 )  <span style="color: #a855f7;">y</span>  FILTRO MACHINE LEARNING</span>
+        </div>
+        <div style="font-size: 0.83rem; color: #cbd5e1; line-height: 1.4;">
+            El bot comprará si se detecta un <strong>Cruce Inicial (RAMA 1)</strong> O si el mercado está en un <strong>Rally y confirma Re-Entrada (RAMA 2)</strong>, siempre que el <strong>Filtro ML</strong> otorgue la certeza requerida.
+        </div>
+    </div>
+
+    <!-- Cajas explicativas de RAMA 1 y RAMA 2 -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem;">
+        <div style="background: rgba(56, 189, 248, 0.06); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 10px; padding: 1.1rem;">
+            <div style="font-weight: bold; color: #38bdf8; font-size: 0.95rem; margin-bottom: 0.6rem; display: flex; align-items: center; gap: 0.5rem;">
+                <i class="fa-solid fa-rocket"></i> RAMA 1: Entrada por Cruce Inicial
+            </div>
+            <div style="font-size: 0.82rem; color: #cbd5e1; line-height: 1.5;">
+                • <strong>MACD Line</strong> Cruza por encima de <strong>MACD Signal</strong><br>
+                • <strong>RSI (14)</strong> > <strong>45.0</strong>
+            </div>
+        </div>
+
+        <div style="background: rgba(245, 158, 11, 0.06); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 10px; padding: 1.1rem;">
+            <div style="font-weight: bold; color: #f59e0b; font-size: 0.95rem; margin-bottom: 0.6rem; display: flex; align-items: center; gap: 0.5rem;">
+                <i class="fa-solid fa-rotate-right"></i> RAMA 2: Re-Entrada por Impulso
+            </div>
+            <div style="font-size: 0.82rem; color: #cbd5e1; line-height: 1.5;">
+                • <strong>MACD Line</strong> > <strong>MACD Signal</strong> (Tendencia alcista activa)<br>
+                • <strong>EMA 9</strong> > <strong>EMA 21</strong> (Alineación de medias)<br>
+                • <strong>RSI (14)</strong> Cruza por encima de <strong>50.0</strong> (Rebote/Continuación)
+            </div>
+        </div>
     </div>
 
     <form id="strategy-form" method="POST">
         <div id="save-status-banner" style="display: none; margin-bottom: 1.5rem;"></div>
+        <div style="font-weight: bold; color: #cbd5e1; margin-bottom: 0.75rem; font-size: 0.9rem;">
+            Reglas de Entrada Editables en Base de Datos:
+        </div>
         <div id="rules-container">
             <!-- Las reglas se renderizarán dinámicamente con JavaScript -->
         </div>
