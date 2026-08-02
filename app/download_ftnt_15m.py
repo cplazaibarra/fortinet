@@ -22,15 +22,16 @@ console = Console()
 
 # 1. Cargar variables de entorno
 load_dotenv()
+load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
 
 ALPACA_API_KEY = os.getenv("ALPACA_API_KEY")
 ALPACA_SECRET_KEY = os.getenv("ALPACA_SECRET_KEY")
 
-DB_HOST = os.getenv("POSTGRES_HOST", "localhost")
-DB_PORT = int(os.getenv("POSTGRES_PORT", "5432"))
-DB_NAME = os.getenv("POSTGRES_DB", "fortinet_db")
-DB_USER = os.getenv("POSTGRES_USER", "postgres")
-DB_PASS = os.getenv("POSTGRES_PASSWORD", "postgres")
+DB_HOST = os.getenv("POSTGRES_HOST") or os.getenv("DB_HOST", "localhost")
+DB_PORT = int(os.getenv("POSTGRES_PORT") or os.getenv("DB_PORT", "5432"))
+DB_NAME = os.getenv("POSTGRES_DB") or os.getenv("DB_NAME", "fortinet_db")
+DB_USER = os.getenv("POSTGRES_USER") or os.getenv("DB_USER", "postgres")
+DB_PASS = os.getenv("POSTGRES_PASSWORD") or os.getenv("DB_PASSWORD", "postgres")
 
 SYMBOL = "FTNT"
 TIMEFRAME = "15Min"
