@@ -93,24 +93,31 @@ def init_db():
     # 5. Tabla de velas de 15 minutos con métricas de trading precalculadas
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS candles_15m (
-        time BIGINT PRIMARY KEY,
-        open DOUBLE PRECISION NOT NULL,
-        high DOUBLE PRECISION NOT NULL,
-        low DOUBLE PRECISION NOT NULL,
-        close DOUBLE PRECISION NOT NULL,
-        volume DOUBLE PRECISION NOT NULL,
-        ema9 DOUBLE PRECISION, ema9_slope DOUBLE PRECISION, ema9_slope_pct DOUBLE PRECISION,
-        ema21 DOUBLE PRECISION, ema21_slope DOUBLE PRECISION, ema21_slope_pct DOUBLE PRECISION,
-        ema35 DOUBLE PRECISION, ema35_slope DOUBLE PRECISION, ema35_slope_pct DOUBLE PRECISION,
-        ema50 DOUBLE PRECISION, ema50_slope DOUBLE PRECISION, ema50_slope_pct DOUBLE PRECISION,
-        ema100 DOUBLE PRECISION, ema100_slope DOUBLE PRECISION, ema100_slope_pct DOUBLE PRECISION,
-        ema200 DOUBLE PRECISION, ema200_slope DOUBLE PRECISION, ema200_slope_pct DOUBLE PRECISION,
-        rsi14 DOUBLE PRECISION,
+        timestamp TIMESTAMPTZ NOT NULL,
+        symbol VARCHAR(20) DEFAULT 'FTNT',
+        open DOUBLE PRECISION,
+        high DOUBLE PRECISION,
+        low DOUBLE PRECISION,
+        close DOUBLE PRECISION,
+        volume DOUBLE PRECISION,
+        trade_count INTEGER,
+        vwap DOUBLE PRECISION,
+        ema_9 DOUBLE PRECISION, slope_ema9_pct DOUBLE PRECISION,
+        ema_21 DOUBLE PRECISION, slope_ema21_pct DOUBLE PRECISION,
+        ema_35 DOUBLE PRECISION, slope_ema35_pct DOUBLE PRECISION,
+        ema_50 DOUBLE PRECISION, slope_ema50_pct DOUBLE PRECISION,
+        ema_100 DOUBLE PRECISION, slope_ema100_pct DOUBLE PRECISION,
+        ema_200 DOUBLE PRECISION, slope_ema200_pct DOUBLE PRECISION,
+        rsi_14 DOUBLE PRECISION,
         macd DOUBLE PRECISION, macd_signal DOUBLE PRECISION, macd_hist DOUBLE PRECISION,
-        atr14 DOUBLE PRECISION
+        atr_14 DOUBLE PRECISION,
+        PRIMARY KEY (symbol, timestamp)
     );
-    CREATE INDEX IF NOT EXISTS idx_candles_15m_time ON candles_15m(time DESC);
     ''')
+    try:
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_candles_15m_ts ON candles_15m(timestamp DESC);")
+    except Exception:
+        pass
     conn.commit()
     cursor = conn.cursor()
 
