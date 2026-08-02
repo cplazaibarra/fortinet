@@ -20,6 +20,13 @@ import sync_worker
 app = Flask(__name__)
 app.secret_key = "btc_machine_super_secret_key"
 
+@app.after_request
+def add_header(response):
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
+
 # Hilo del Bot de Trading
 bot_thread = None
 
@@ -165,6 +172,8 @@ def evaluate_rules(klines, rules, is_exit=False):
         sig_c1 = get_variable_value(c1, 'macd_signal', klines=klines[:-1]) or 0
         rsi_c0 = get_variable_value(c0, 'rsi14', klines=klines) or 50
         rsi_c1 = get_variable_value(c1, 'rsi14', klines=klines[:-1]) or 50
+        close_c0 = get_variable_value(c0, 'close', klines=klines) or 0
+        open_c0 = get_variable_value(c0, 'open', klines=klines) or 0
         ema9_c0 = get_variable_value(c0, 'ema9', klines=klines) or 0
         ema21_c0 = get_variable_value(c0, 'ema21', klines=klines) or 0
 
@@ -174,12 +183,17 @@ def evaluate_rules(klines, rules, is_exit=False):
         # Disparador 2: Re-Entrada por Impulso en Tendencia Alcista (MACD > Signal + EMA9 > EMA21 + RSI Cruza por encima de 50.0)
         trig2 = (macd_c0 > sig_c0) and (ema9_c0 > ema21_c0) and (rsi_c1 <= 50.0) and (rsi_c0 > 50.0)
 
+        # Disparador 3: Ruptura por Impulso Alcista (MACD > Signal + Precio > EMA9 > EMA21 + Vela Verde Impulso + RSI > 48.0)
+        trig3 = (macd_c0 > sig_c0) and (close_c0 > ema9_c0) and (ema9_c0 > ema21_c0) and (close_c0 > open_c0 * 1.003) and (rsi_c0 > 48.0)
+
         if trig1:
             return True, "Disparador 1: Cruce Inicial MACD + RSI > 45"
         elif trig2:
             return True, "Disparador 2: Re-Entrada por Impulso en Tendencia (MACD > Signal + EMA9 > EMA21 + RSI Cruza 50)"
+        elif trig3:
+            return True, "Disparador 3: Ruptura por Impulso Alcista (MACD > Signal + Precio > EMA9 > EMA21 + Impulso Verde + RSI > 48)"
         else:
-            return False, "No se cumplen las reglas de entrada (Cruce Inicial o Re-Entrada en Tendencia)"
+            return False, "No se cumplen las reglas de entrada (RAMA 1, RAMA 2 o RAMA 3)"
 
 def get_open_position(min_usdt_threshold=2.0):
     """Busca si hay una operación de compra abierta (que no tenga venta asociada).
@@ -1154,6 +1168,12 @@ def api_dashboard_status():
         r2_c3 = (rsi_c1 <= 50.0) and (rsi_c0 > 50.0)
         rama2_passed = r2_c1 and r2_c2 and r2_c3
 
+        r3_c1 = macd_c0 > sig_c0
+        r3_c2 = (close_c0 > ema9_c0) and (ema9_c0 > ema21_c0)
+        r3_c3 = close_c0 > (open_c0 * 1.003)
+        r3_c4 = rsi_c0 > 48.0
+        rama3_passed = r3_c1 and r3_c2 and r3_c3 and r3_c4
+
         entry_branches = {
             'rama1': {
                 'title': 'RAMA 1: Entrada por Cruce Inicial',
@@ -1170,6 +1190,15 @@ def api_dashboard_status():
                     {'label': 'MACD Line por encima de Signal (Tendencia)', 'val_str': f"{macd_c0:.2f} > {sig_c0:.2f}", 'passed': r2_c1},
                     {'label': 'Alineación de Medias (EMA9 > EMA21)', 'val_str': f"${ema9_c0:.2f} > ${ema21_c0:.2f}", 'passed': r2_c2},
                     {'label': 'RSI (14) Cruza por encima de 50.0', 'val_str': f"{rsi_c0:.2f} (ant: {rsi_c1:.2f})", 'passed': r2_c3}
+                ]
+            },
+            'rama3': {
+                'title': 'RAMA 3: Ruptura por Impulso Alcista',
+                'passed': rama3_passed,
+                'items': [
+                    {'label': 'Precio por encima de EMA9 y EMA21', 'val_str': f"${close_c0:.2f} > ${ema9_c0:.2f}", 'passed': r3_c2},
+                    {'label': 'Vela Verde Impulso (> +0.3%)', 'val_str': f"Cierre: ${close_c0:.2f} vs Ap: ${open_c0:.2f}", 'passed': r3_c3},
+                    {'label': 'RSI (14) > 48.0', 'val_str': f"{rsi_c0:.2f} vs 48.0", 'passed': r3_c4}
                 ]
             },
             'ml_filter': {
