@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+
+{% block title %}Logs de Actividad | FORTINET TRADING BOT{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <h1 class="page-title"><i class="fa-solid fa-clipboard-list" style="color: var(--primary);"></i> Registro de Actividad (Logs)</h1>
+        <p class="page-description">Historial detallado de señales, operaciones, filtros de ML y eventos del sistema.</p>
+    </div>
+</div>
+
+<!-- Barra de Control de Logs -->
+<div class="card" style="margin-bottom: 1.5rem; padding: 1rem 1.25rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+            <label style="font-weight: bold; font-size: 0.9rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.4rem;">
+                <i class="fa-solid fa-filter" style="color: var(--primary);"></i> Mostrar registros:
+            </label>
+            <select id="logs-limit-select" class="form-control" style="width: auto; padding: 0.4rem 0.8rem; font-size: 0.9rem; font-weight: bold; background: #1e293b; color: #cbd5e1; border-color: var(--border-color); border-radius: 6px;">
+                <option value="20" {% if current_limit == 20 %}selected{% endif %}>Últimos 20 registros (Por Defecto)</option>
+                <option value="30" {% if current_limit == 30 %}selected{% endif %}>Últimos 30 registros</option>
+                <option value="60" {% if current_limit == 60 %}selected{% endif %}>Últimos 60 registros</option>
+            </select>
+        </div>
+
+        <button type="button" id="btn-clear-logs" class="btn btn-danger" style="padding: 0.45rem 1rem; font-size: 0.85rem; font-weight: bold;">
+            <i class="fa-solid fa-trash-can"></i> Limpiar Logs
+        </button>
+    </div>
+</div>
+
+<!-- Contenedor Estilo Terminal de Logs -->
+<div class="card" style="padding: 1.25rem; background: #0f172a; border: 1px solid rgba(255,255,255,0.1);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 0.75rem;">
+        <span style="font-family: monospace; font-size: 0.85rem; color: #94a3b8; font-weight: bold;">
+            <i class="fa-solid fa-terminal" style="color: #a855f7;"></i> EVENT_LOG_STREAM // <span id="logs-count-text">{{ logs|length }}</span> REGISTROS MOSTRADOS
+        </span>
+        <span style="font-size: 0.75rem; color: #64748b;">Formato: [YYYY-MM-DD HH:MM:SS] [NIVEL] Mensaje</span>
+    </div>
+
+    <div id="logs-terminal-container" style="font-family: 'JetBrains Mono', 'Consolas', 'Courier New', monospace; font-size: 0.85rem; line-height: 1.6; max-height: 600px; overflow-y: auto; padding-right: 0.5rem;">
+        {% if logs %}
+            {% for log in logs %}
+                <div class="log-line" style="padding: 0.4rem 0.6rem; border-bottom: 1px solid rgba(255,255,255,0.03); display: flex; align-items: flex-start; gap: 0.75rem; word-break: break-word;">
+                    <span style="color: #64748b; white-space: nowrap;">[{{ log.timestamp }}]</span>
+                    
+                    {% if log.level == 'INFO' %}
+                        <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid #10b981; font-size: 0.7rem; font-weight: bold; padding: 0.1rem 0.4rem; white-space: nowrap;">INFO</span>
+                    {% elif log.level == 'WARNING' %}
+                        <span class="badge" style="background: rgba(245, 158, 11, 0.2); color: #fde047; border: 1px solid #f59e0b; font-size: 0.7rem; font-weight: bold; padding: 0.1rem 0.4rem; white-space: nowrap;">WARNING</span>
+                    {% elif log.level == 'ERROR' %}
+                        <span class="badge" style="background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid #ef4444; font-size: 0.7rem; font-weight: bold; padding: 0.1rem 0.4rem; white-space: nowrap;">ERROR</span>
+                    {% else %}
+                        <span class="badge" style="background: rgba(148, 163, 184, 0.2); color: #cbd5e1; border: 1px solid #94a3b8; font-size: 0.7rem; font-weight: bold; padding: 0.1rem 0.4rem; white-space: nowrap;">{{ log.level }}</span>
+                    {% endif %}
+
+                    <span style="color: {% if log.level == 'ERROR' %}#fca5a5{% elif log.level == 'WARNING' %}#fef08a{% else %}#e2e8f0{% endif %}; flex: 1;">
+                        {{ log.message }}
+                    </span>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div style="text-align: center; color: #64748b; padding: 3rem 1rem;">
+                <i class="fa-solid fa-inbox" style="font-size: 2rem; margin-bottom: 0.5rem; display: block;"></i>
+                No hay registros de actividad almacenados aún.
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Cambio de límite de registros a mostrar (20, 30, 60)
+    document.getElementById('logs-limit-select').addEventListener('change', function(e) {
+        const selectedLimit = e.target.value;
+        window.location.href = `/logs?limit=${selectedLimit}`;
+    });
+
+    // Event listener para limpiar los logs de la base de datos
+    document.getElementById('btn-clear-logs').addEventListener('click', async () => {
+        if (confirm('¿Estás seguro de que deseas borrar todos los registros de actividad (logs)?')) {
+            try {
+                const res = await fetch('/api/logs/clear', { method: 'POST' });
+                const json = await res.json();
+                if (json.success) {
+                    location.href = '/logs';
+                } else {
+                    alert('Error al limpiar los logs: ' + json.message);
+                }
+            } catch (err) {
+                console.error("Error al borrar logs:", err);
+            }
+        }
+    });
+</script>
+{% endblock %}

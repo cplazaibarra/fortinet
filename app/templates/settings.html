@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+
+{% block title %}Configuración | FORTINET TRADING BOT{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Configuración del Sistema</h1>
+    <p class="page-description">Configura la API de Binance, intervalos de velas y parámetros de simulación.</p>
+</div>
+
+<div class="grid grid-2">
+    <!-- Configuración del Bot -->
+    <div class="card">
+        <div class="card-title">
+            <span>Parámetros de Operación</span>
+            <i class="fa-solid fa-sliders" style="color: var(--primary);"></i>
+        </div>
+        <form action="{{ url_for('save_settings') }}" method="POST">
+            <!-- Intervalo de Velas -->
+            <div class="form-group">
+                <label class="form-label" for="candle_interval">Tiempo de cada vela (Intervalo)</label>
+                <select name="candle_interval" id="candle_interval">
+                    <option value="1m" {% if settings.candle_interval == '1m' %}selected{% endif %}>1 minuto</option>
+                    <option value="3m" {% if settings.candle_interval == '3m' %}selected{% endif %}>3 minutos</option>
+                    <option value="5m" {% if settings.candle_interval == '5m' %}selected{% endif %}>5 minutos</option>
+                    <option value="15m" {% if settings.candle_interval == '15m' %}selected{% endif %}>15 minutos</option>
+                    <option value="30m" {% if settings.candle_interval == '30m' %}selected{% endif %}>30 minutos</option>
+                    <option value="1h" {% if settings.candle_interval == '1h' %}selected{% endif %}>1 hora</option>
+                    <option value="4h" {% if settings.candle_interval == '4h' %}selected{% endif %}>4 horas</option>
+                    <option value="1d" {% if settings.candle_interval == '1d' %}selected{% endif %}>1 día</option>
+                </select>
+                <small style="color: var(--text-muted); display: block; margin-top: 0.25rem;">
+                    Define el tamaño de cada vela descargada de Binance para calcular los indicadores y mostrar en la gráfica.
+                </small>
+            </div>
+
+            <!-- Perfil de Estrategia Activo -->
+            <div class="form-group">
+                <label class="form-label" for="active_strategy_profile">Perfil de Estrategia Activo del Bot</label>
+                <select name="active_strategy_profile" id="active_strategy_profile" class="form-control">
+                    <option value="1" {% if settings.active_strategy_profile != '2' %}selected{% endif %}>Perfil 1 (Estrategia Principal + Modelo ML 1)</option>
+                    <option value="2" {% if settings.active_strategy_profile == '2' %}selected{% endif %}>Perfil 2 (Impulso / Breakout + Modelo ML 2)</option>
+                </select>
+                <small style="color: var(--text-muted); display: block; margin-top: 0.25rem;">
+                    Determina qué reglas técnicas y qué modelo de Machine Learning utilizará el Bot de trading en vivo.
+                </small>
+            </div>
+
+            <!-- Modo de Ejecución -->
+            <div class="form-group">
+                <label class="form-label" for="simulation_mode">Modo de Ejecución</label>
+                <select name="simulation_mode" id="simulation_mode">
+                    <option value="true" {% if settings.simulation_mode == 'true' %}selected{% endif %}>Simulación Local (Paper Trading)</option>
+                    <option value="false" {% if settings.simulation_mode == 'false' %}selected{% endif %}>Binance Testnet Real</option>
+                </select>
+                <small style="color: var(--text-muted); display: block; margin-top: 0.25rem;">
+                    El modo Simulación utiliza saldos locales y simula compras/ventas. El modo Binance Testnet enviará órdenes reales a la red de pruebas.
+                </small>
+            </div>
+
+            <!-- Balances de Simulación -->
+            <div class="grid grid-2" style="gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label" for="simulation_balance">Saldo Inicial USDT (Simulación)</label>
+                    <input type="number" step="any" class="form-control" name="simulation_balance" id="simulation_balance" value="{{ settings.simulation_balance }}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="simulation_btc_balance">Saldo Inicial FTNT (Simulación)</label>
+                    <input type="number" step="any" class="form-control" name="simulation_btc_balance" id="simulation_btc_balance" value="{{ settings.simulation_btc_balance }}">
+                </div>
+            </div>
+
+            <!-- Tamaño de orden -->
+            <div class="form-group">
+                <label class="form-label" for="trade_size_usd">Monto a Invertir por Operación (USDT)</label>
+                <div style="position: relative;">
+                    <span style="position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%); color: #10b981; font-weight: bold;">$</span>
+                    <input type="number" step="any" class="form-control" name="trade_size_usd" id="trade_size_usd" value="{{ settings.trade_size_usd }}" style="padding-left: 2rem; font-size: 1.1rem; font-weight: bold; color: #10b981; background: #1e293b;">
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.35rem; margin-top: 0.5rem; flex-wrap: wrap;">
+                    <span style="font-size: 0.8rem; color: var(--text-muted);">Ajuste Rápido:</span>
+                    <button type="button" onclick="document.getElementById('trade_size_usd').value=100" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.78rem;">$100</button>
+                    <button type="button" onclick="document.getElementById('trade_size_usd').value=500" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.78rem;">$500</button>
+                    <button type="button" onclick="document.getElementById('trade_size_usd').value=1000" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.78rem; background: rgba(16, 185, 129, 0.2); border-color: #10b981; color: #6ee7b7;">$1,000</button>
+                    <button type="button" onclick="document.getElementById('trade_size_usd').value=2500" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.78rem;">$2,500</button>
+                    <button type="button" onclick="document.getElementById('trade_size_usd').value=5000" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.78rem;">$5,000</button>
+                </div>
+                <small style="color: var(--text-muted); display: block; margin-top: 0.25rem;">
+                    Cantidad en dólares (USDT) que el bot invertirá en cada compra de FTNT.
+                </small>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+                <i class="fa-solid fa-floppy-disk"></i> Guardar Parámetros de Operación
+            </button>
+        </form>
+    </div>
+
+    <!-- Credenciales de Binance -->
+    <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+            <div class="card-title">
+                <span>API Keys de Binance Spot Testnet</span>
+                <i class="fa-solid fa-key" style="color: var(--warning);"></i>
+            </div>
+            
+            <div class="alert alert-info" style="font-size: 0.85rem; padding: 0.75rem; margin-bottom: 1rem;">
+                <i class="fa-solid fa-circle-info"></i> Usa las llaves de la red de pruebas: <a href="https://testnet.binance.vision" target="_blank" style="color: var(--primary); text-decoration: underline;">testnet.binance.vision</a>.
+            </div>
+
+            <form action="{{ url_for('save_keys') }}" method="POST">
+                <div class="form-group">
+                    <label class="form-label" for="binance_api_key">Binance API Key</label>
+                    <input type="text" class="form-control" name="binance_api_key" id="binance_api_key" value="{{ settings.binance_api_key }}" placeholder="Introduce tu API Key">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="binance_api_secret">Binance API Secret</label>
+                    <input type="password" class="form-control" name="binance_api_secret" id="binance_api_secret" value="{{ settings.binance_api_secret }}" placeholder="Introduce tu API Secret">
+                </div>
+
+                <div class="grid grid-2" style="gap: 1rem; margin-top: 1rem;">
+                    <button type="button" id="btn-test-keys" class="btn btn-secondary">
+                        <i class="fa-solid fa-plug"></i> Probar Conexión
+                    </button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fa-solid fa-key"></i> Guardar Llaves
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Acciones de Mantenimiento -->
+        <div style="border-top: 1px solid var(--border-color); padding-top: 1.5rem; margin-top: 2rem;">
+            <div class="card-title" style="margin-bottom: 0.5rem; font-size: 1.1rem; color: var(--danger);">
+                Zona de Peligro
+            </div>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem;">
+                Reinicia los saldos a 10,000 USDT y elimina todo el historial de compras/ventas y registros.
+            </p>
+            <form action="{{ url_for('reset_database') }}" method="POST" onsubmit="return confirm('¿Estás seguro de que deseas limpiar todo el historial? Esto no se puede deshacer.');">
+                <button type="submit" class="btn btn-danger" style="width: 100%;">
+                    <i class="fa-solid fa-triangle-exclamation"></i> Limpiar Todo y Reiniciar Base de Datos
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.getElementById('btn-test-keys').addEventListener('click', async function() {
+        const apiKey = document.getElementById('binance_api_key').value;
+        const apiSecret = document.getElementById('binance_api_secret').value;
+        
+        if (!apiKey || !apiSecret) {
+            alert("Por favor introduce la API Key y el API Secret antes de realizar la prueba.");
+            return;
+        }
+
+        this.disabled = true;
+        this.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Probando...';
+
+        try {
+            const response = await fetch('/api/test-keys', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ api_key: apiKey, api_secret: apiSecret })
+            });
+            const result = await response.json();
+            if (result.success) {
+                alert("¡Conexión Exitosa con Binance Testnet! La API Key es válida.");
+            } else {
+                alert("Fallo de conexión: " + result.message);
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Error de red al intentar conectar.");
+        } finally {
+            this.disabled = false;
+            this.innerHTML = '<i class="fa-solid fa-plug"></i> Probar Conexión';
+        }
+    });
+</script>
+{% endblock %}

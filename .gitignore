@@ -1,0 +1,55 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.venv/
+venv/
+env/
+*.pyc
+
+# Modelos ML entrenados (archivos binarios grandes)
+*.joblib
+*.pkl
+data/models/
+
+# Variables de entorno y secretos
+.env
+*.env
+*.key
+*.secret
+
+# Configuración local de IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Datos históricos (demasiado pesados para git)
+data/historical/
+data/*.csv
+data/*.json
+data/*.parquet
+
+# Docker local
+docker-compose.override.yml
+
+# Jupyter notebooks checkpoints
+.ipynb_checkpoints/
+
+# Scripts de scratch
+app/scratch_*.py

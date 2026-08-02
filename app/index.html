@@ -1,0 +1,461 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard | FORTINET TRADING BOT{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Dashboard del Sistema</h1>
+    <p class="page-description">Monitoreo en tiempo real del bot de trading de FTNT.</p>
+</div>
+
+<div class="grid grid-3" style="margin-bottom: 2rem;">
+    <!-- Card Estado del Bot -->
+    <div class="card">
+        <div class="card-title">
+            <span>Estado del Bot</span>
+            <div class="status-indicator">
+                <div id="bot-status-dot" class="status-dot {% if settings.bot_active == 'true' %}active{% endif %}"></div>
+                <span id="bot-status-text">{% if settings.bot_active == 'true' %}ACTIVO{% else %}INACTIVO{% endif %}</span>
+            </div>
+        </div>
+        <div style="margin-top: 1rem;">
+            <p style="margin-bottom: 1rem; color: var(--text-muted);">
+                Intervalo actual de velas: <strong>{{ settings.candle_interval }}</strong>
+            </p>
+            <form action="{{ url_for('toggle_bot') }}" method="POST">
+                {% if settings.bot_active == 'true' %}
+                    <button type="submit" class="btn btn-danger" style="width: 100%;">
+                        <i class="fa-solid fa-stop"></i> Detener Bot de Trading
+                    </button>
+                {% else %}
+                    <button type="submit" class="btn btn-success" style="width: 100%;">
+                        <i class="fa-solid fa-play"></i> Iniciar Bot de Trading
+                    </button>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    <!-- Card Balances -->
+    <div class="card">
+        <div class="card-title">
+            <span>Balances de Cuenta</span>
+            <span class="badge {% if settings.simulation_mode == 'true' %}badge-warning{% else %}badge-success{% endif %}">
+                {% if settings.simulation_mode == 'true' %}Simulación{% else %}Testnet Binance{% endif %}
+            </span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem;">
+            <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--text-muted);">Saldo USDT:</span>
+                <strong id="bal-usdt">{{ "%.2f"|format(balances.usdt) }} USDT</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--text-muted);">Saldo FTNT:</span>
+                <strong id="bal-btc">{{ "%.5f"|format(balances.btc) }} FTNT</strong>
+            </div>
+            <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 0.5rem 0;">
+            <div style="display: flex; justify-content: space-between; font-size: 1.1rem;">
+                <span>Total Estimado:</span>
+                <strong id="bal-total" style="color: var(--primary);">Calculando...</strong>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card Información del Mercado -->
+    <div class="card">
+        <div class="card-title">
+            <span>Información de Mercado</span>
+            <i class="fa-solid fa-globe" style="color: var(--primary);"></i>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem;">
+            <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--text-muted);">Par de Trading:</span>
+                <strong>FTNT / USDT</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--text-muted);">Precio Actual:</span>
+                <strong id="live-btc-price" style="font-size: 1.2rem; color: var(--success);">$--.---</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--text-muted);">Tamaño por Trade:</span>
+                <strong>{{ settings.trade_size_usd }} USDT</strong>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Card Operaciones Manuales -->
+<div class="card" style="margin-bottom: 2rem; border-left: 4px solid var(--primary); background: linear-gradient(180deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.8) 100%);">
+    <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+        <span>⚡ Operaciones Manuales (Trading Directo)</span>
+        <i class="fa-solid fa-hand-pointer" style="color: var(--primary); font-size: 1.2rem;"></i>
+    </div>
+    
+    <div id="manual-trade-banner" style="display: none; margin-top: 1rem;"></div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-top: 1rem; align-items: center;">
+        <!-- Sección 1: Compra Manual con selección de monto -->
+        <div style="background: rgba(16, 185, 129, 0.05); padding: 1.25rem; border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.25);">
+            <label style="font-weight: bold; font-size: 0.95rem; color: #10b981; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                <i class="fa-solid fa-cart-shopping" style="font-size: 1.1rem;"></i> Compra Manual de FTNT (Seleccionar Monto)
+            </label>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+                Ingresa o selecciona la cantidad exacta en dólares (USDT) para ejecutar una compra inmediata a precio de mercado.
+            </p>
+            <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.75rem;">
+                <div style="position: relative; flex: 1;">
+                    <span style="position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%); color: #10b981; font-weight: bold; font-size: 1.1rem;">$</span>
+                    <input type="number" step="any" id="manual-buy-amount" class="form-control" value="10" placeholder="10" style="padding-left: 2rem; font-size: 1.1rem; font-weight: bold; color: #10b981; background: #1e293b; border-color: #10b981;">
+                </div>
+                <button type="button" id="btn-manual-buy" class="btn btn-success" style="padding: 0.6rem 1.2rem; font-weight: bold; white-space: nowrap; font-size: 0.95rem;">
+                    <i class="fa-solid fa-plus"></i> Comprar FTNT
+                </button>
+            </div>
+            <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; align-items: center;">
+                <span style="font-size: 0.8rem; color: var(--text-muted); margin-right: 0.2rem;">Presets:</span>
+                <button type="button" onclick="selectPreset(10)" data-preset-val="10" class="btn btn-secondary btn-buy-preset" style="padding: 0.25rem 0.55rem; font-size: 0.8rem;">$10</button>
+                <button type="button" onclick="selectPreset(50)" data-preset-val="50" class="btn btn-secondary btn-buy-preset" style="padding: 0.25rem 0.55rem; font-size: 0.8rem;">$50</button>
+                <button type="button" onclick="selectPreset(100)" data-preset-val="100" class="btn btn-secondary btn-buy-preset" style="padding: 0.25rem 0.55rem; font-size: 0.8rem;">$100</button>
+                <button type="button" onclick="selectPreset(500)" data-preset-val="500" class="btn btn-secondary btn-buy-preset" style="padding: 0.25rem 0.55rem; font-size: 0.8rem;">$500</button>
+                <button type="button" onclick="selectPreset(1000)" data-preset-val="1000" class="btn btn-secondary btn-buy-preset" style="padding: 0.25rem 0.55rem; font-size: 0.8rem;">$1,000</button>
+            </div>
+        </div>
+
+        <!-- Sección 2: Salida Total (Vender 100%) -->
+        <div style="background: rgba(239, 68, 68, 0.05); padding: 1.25rem; border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.25);">
+            <label style="font-weight: bold; font-size: 0.95rem; color: #ef4444; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                <i class="fa-solid fa-right-from-bracket" style="font-size: 1.1rem;"></i> Salida de la Entrada en Curso (Vender 100%)
+            </label>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+                Ejecuta una venta total inmediata del 100% de la posición/tenencia activa de FTNT a precio de mercado.
+            </p>
+            <button type="button" id="btn-manual-sell-all" class="btn btn-danger" style="width: 100%; font-weight: bold; padding: 0.7rem 1rem; font-size: 0.95rem;">
+                <i class="fa-solid fa-arrow-trend-down"></i> Vender 100% de la Posición Vigente
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Tabla de Operaciones Recientes -->
+<div class="card" style="margin-bottom: 2rem;">
+    <div class="card-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <span>Operaciones Recientes</span>
+            <div style="display: flex; align-items: center; gap: 0.4rem;">
+                <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">Mostrar:</span>
+                <select id="recent-trades-limit-select" class="form-control" style="width: auto; padding: 0.25rem 0.65rem; font-size: 0.82rem; font-weight: bold; background: #1e293b; color: #cbd5e1; border-color: var(--border-color); border-radius: 6px;">
+                    <option value="5" selected>Últimas 5 operaciones</option>
+                    <option value="10">Últimas 10 operaciones</option>
+                    <option value="20">Últimas 20 operaciones</option>
+                </select>
+            </div>
+        </div>
+        <a href="{{ url_for('chart_page') }}" class="btn btn-secondary" style="padding: 0.3rem 0.85rem; font-size: 0.82rem;">
+            Ver en Gráfica <i class="fa-solid fa-arrow-right"></i>
+        </a>
+    </div>
+    <div style="overflow-x: auto;">
+        {% if trades %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Tipo</th>
+                        <th>Origen / Motivo</th>
+                        <th>Precio</th>
+                        <th>Monto</th>
+                        <th>Total</th>
+                        <th>PnL</th>
+                    </tr>
+                </thead>
+                <tbody id="recent-trades-tbody">
+                    {% for trade in trades %}
+                        <tr class="trade-row">
+                            <td>{{ trade.date_str }}</td>
+                            <td>
+                                {% if trade.type == 'BUY' %}
+                                    <span class="badge badge-success">BUY</span>
+                                {% elif trade.type == 'SELL' %}
+                                    <span class="badge badge-danger">SELL</span>
+                                {% elif trade.type == 'SIGNAL_REJECTED' or trade.type == 'REJECTED' %}
+                                    <span class="badge" style="background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid #ef4444; font-weight: bold; padding: 0.2rem 0.5rem; font-size: 0.75rem;">
+                                        ⛔ OMITIDA ML
+                                    </span>
+                                {% else %}
+                                    <span class="badge badge-secondary">{{ trade.type }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if trade.type == 'SIGNAL_REJECTED' or trade.type == 'REJECTED' %}
+                                    <span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.4); font-weight: bold; padding: 0.2rem 0.5rem; font-size: 0.75rem;" title="{{ trade.reason or 'Señal no ejecutada por filtro de ML' }}">
+                                        🤖 SEÑAL (RECHAZADA ML)
+                                    </span>
+                                    {% if trade.reason %}
+                                        <div style="font-size: 0.72rem; color: #fca5a5; margin-top: 0.25rem; max-width: 260px; line-height: 1.2;">
+                                            <i class="fa-solid fa-filter-circle-xmark" style="color: #ef4444;"></i> {{ trade.reason }}
+                                        </div>
+                                    {% endif %}
+                                {% elif trade.is_manual or trade.mode == 'MANUAL' %}
+                                    <span class="badge" style="background: rgba(168, 85, 247, 0.25); color: #e9d5ff; border: 1px solid #a855f7; font-weight: bold; padding: 0.2rem 0.5rem; font-size: 0.75rem;" title="{{ trade.reason or 'Orden Manual Directa por Usuario' }}">
+                                        👤 MANUAL
+                                    </span>
+                                    {% if trade.reason %}
+                                        <div style="font-size: 0.72rem; color: #cbd5e1; margin-top: 0.25rem; max-width: 260px; line-height: 1.2;">
+                                            <i class="fa-solid fa-circle-info" style="color: #a855f7;"></i> {{ trade.reason }}
+                                        </div>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="badge" style="background: rgba(59, 130, 246, 0.2); color: #93c5fd; border: 1px solid #3b82f6; font-weight: bold; padding: 0.2rem 0.5rem; font-size: 0.75rem;" title="{{ trade.reason or 'Indicadores Técnicos' }}">
+                                        🤖 AUTOMÁTICA
+                                    </span>
+                                    {% if trade.reason %}
+                                        <div style="font-size: 0.72rem; color: #cbd5e1; margin-top: 0.25rem; max-width: 260px; line-height: 1.2;">
+                                            <i class="fa-solid fa-circle-info" style="color: #3b82f6;"></i> {{ trade.reason }}
+                                        </div>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                            <td>${{ "%.2f"|format(trade.price) }}</td>
+                            <td>{{ "%.5f"|format(trade.amount) }}</td>
+                            <td>${{ "%.2f"|format(trade.usdt_value) }}</td>
+                            <td>
+                                {% if trade.type == 'SIGNAL_REJECTED' or trade.type == 'REJECTED' %}
+                                    <span style="color: var(--text-muted); font-size: 0.8rem;">$0.00 (Omitida)</span>
+                                {% elif trade.pnl is not none %}
+                                    <span class="{% if trade.pnl >= 0 %}pnl-positive{% else %}pnl-negative{% endif %}">
+                                        {{ "+" if trade.pnl >= 0 else "" }}{{ "%.2f"|format(trade.pnl) }} USDT
+                                    </span>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p style="color: var(--text-muted); text-align: center; padding: 2rem 0;">No hay transacciones registradas aún.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Obtener precio actual y actualizar balance total
+    async function updateLivePrice() {
+        try {
+            const response = await fetch('/api/data');
+            const result = await response.json();
+            if (result.success && result.klines && result.klines.length > 0) {
+                const lastCandle = result.klines[result.klines.length - 1];
+                const price = lastCandle.close;
+                
+                const priceEl = document.getElementById('live-btc-price');
+                priceEl.innerText = '$' + price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                
+                // Actualizar balances reales
+                let usdtBal = parseFloat('{{ balances.usdt }}') || 0;
+                let btcBal = parseFloat('{{ balances.btc }}') || 0;
+
+                if (result.balances) {
+                    usdtBal = result.balances.usdt;
+                    btcBal = result.balances.btc;
+                    document.getElementById('bal-usdt').innerText = usdtBal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' USDT';
+                    document.getElementById('bal-btc').innerText = btcBal.toFixed(5) + ' FTNT';
+                }
+
+                const totalVal = usdtBal + (btcBal * price);
+                document.getElementById('bal-total').innerText = '$' + totalVal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' USDT';
+            }
+        } catch (e) {
+            console.error("Error obteniendo precio actual y balances:", e);
+        }
+    }
+
+    // Filtrar operaciones recientes según la cantidad seleccionada (5, 10, 20)
+    function applyTradesLimit() {
+        const limitSelect = document.getElementById('recent-trades-limit-select');
+        if (!limitSelect) return;
+        const limit = parseInt(limitSelect.value) || 5;
+        const rows = document.querySelectorAll('#recent-trades-tbody tr');
+
+        rows.forEach((row, idx) => {
+            if (idx < limit) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+
+    const limitSelectElem = document.getElementById('recent-trades-limit-select');
+    if (limitSelectElem) {
+        limitSelectElem.addEventListener('change', applyTradesLimit);
+    }
+    // Selección Dinámica de Presets de Compra Manual
+    function selectPreset(amount) {
+        const inputElem = document.getElementById('manual-buy-amount');
+        if (inputElem) {
+            inputElem.value = amount;
+            updatePresetHighlight(amount);
+        }
+    }
+
+    function updatePresetHighlight(currentVal) {
+        const val = parseFloat(currentVal);
+        const presetButtons = document.querySelectorAll('.btn-buy-preset');
+        presetButtons.forEach(btn => {
+            const btnVal = parseFloat(btn.getAttribute('data-preset-val'));
+            if (btnVal === val) {
+                btn.style.background = 'rgba(16, 185, 129, 0.25)';
+                btn.style.borderColor = '#10b981';
+                btn.style.color = '#6ee7b7';
+                btn.style.fontWeight = 'bold';
+            } else {
+                btn.style.background = '#1e293b';
+                btn.style.borderColor = 'var(--border-color, rgba(255, 255, 255, 0.1))';
+                btn.style.color = '#94a3b8';
+                btn.style.fontWeight = 'normal';
+            }
+        });
+    }
+
+    const buyAmountInput = document.getElementById('manual-buy-amount');
+    if (buyAmountInput) {
+        buyAmountInput.addEventListener('input', function() {
+            updatePresetHighlight(this.value);
+        });
+        updatePresetHighlight(buyAmountInput.value);
+    }
+
+    // Compra Manual con progreso en vivo en pantalla
+    document.getElementById('btn-manual-buy').addEventListener('click', async function() {
+        const amountElem = document.getElementById('manual-buy-amount');
+        const amountUsd = parseFloat(amountElem.value) || 0;
+        const banner = document.getElementById('manual-trade-banner');
+
+        if (amountUsd <= 0) {
+            alert('Por favor introduce una cantidad válida en USD para comprar.');
+            return;
+        }
+
+        this.disabled = true;
+        this.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Ejecutando Orden...';
+        
+        banner.style.display = 'block';
+        banner.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.9rem; padding: 0.85rem 1.1rem; border: 1px solid #3b82f6; background: rgba(59, 130, 246, 0.15); color: #93c5fd; border-radius: 8px; font-weight: 500;">
+                <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 1.2rem; color: #3b82f6;"></i>
+                <div>
+                    <strong>Procesando:</strong> Enviando orden de compra a mercado por <strong>$${amountUsd} USDT</strong> en Binance Testnet...
+                </div>
+            </div>`;
+
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+            const res = await fetch('/api/trade/manual-buy', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ amount_usd: amountUsd }),
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+
+            const data = await res.json();
+
+            if (data.success) {
+                banner.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.95rem; padding: 0.85rem 1.1rem; border: 1px solid #10b981; background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border-radius: 8px; font-weight: bold;">
+                        <i class="fa-solid fa-circle-check" style="font-size: 1.3rem; color: #10b981;"></i>
+                        <div>
+                            <div>¡Compra completada con éxito!</div>
+                            <div style="font-size: 0.82rem; font-weight: normal; margin-top: 0.2rem; color: #a7f3d0;">${data.message}</div>
+                        </div>
+                    </div>`;
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                banner.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.95rem; padding: 0.85rem 1.1rem; border: 1px solid #ef4444; background: rgba(239, 68, 68, 0.2); color: #fca5a5; border-radius: 8px; font-weight: bold;">
+                        <i class="fa-solid fa-triangle-exclamation" style="font-size: 1.3rem; color: #ef4444;"></i>
+                        <span>Fallo al comprar: ${data.message}</span>
+                    </div>`;
+                this.disabled = false;
+                this.innerHTML = '<i class="fa-solid fa-plus"></i> Comprar FTNT';
+            }
+        } catch (e) {
+            banner.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.95rem; padding: 0.85rem 1.1rem; border: 1px solid #ef4444; background: rgba(239, 68, 68, 0.2); color: #fca5a5; border-radius: 8px; font-weight: bold;">
+                    <i class="fa-solid fa-triangle-exclamation" style="font-size: 1.3rem; color: #ef4444;"></i>
+                    <span>Error o tiempo de espera agotado al ejecutar la orden: ${e.message || 'Sin conexión'}</span>
+                </div>`;
+            this.disabled = false;
+            this.innerHTML = '<i class="fa-solid fa-plus"></i> Comprar FTNT';
+        }
+    });
+
+    // Salida Total (Vender 100%)
+    document.getElementById('btn-manual-sell-all').addEventListener('click', async function() {
+        const banner = document.getElementById('manual-trade-banner');
+        this.disabled = true;
+        this.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Vendiendo 100%...';
+
+        banner.style.display = 'block';
+        banner.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.92rem; padding: 0.85rem 1.1rem; border: 1px solid #ef4444; background: rgba(239, 68, 68, 0.15); color: #fca5a5; border-radius: 8px; font-weight: 500;">
+                <i class="fa-solid fa-spinner fa-spin" style="font-size: 1.3rem; color: #ef4444;"></i>
+                <div>
+                    <div><strong>Procesando Venta Total (100%):</strong></div>
+                    <div style="font-size: 0.82rem; color: #fecaca; margin-top: 0.2rem;">Conectando con Binance Testnet y ejecutando orden de venta a precio de mercado...</div>
+                </div>
+            </div>`;
+
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+            const res = await fetch('/api/trade/manual-sell-all', {
+                method: 'POST',
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+
+            const data = await res.json();
+
+            if (data.success) {
+                banner.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.95rem; padding: 0.85rem 1.1rem; border: 1px solid #10b981; background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border-radius: 8px; font-weight: bold;">
+                        <i class="fa-solid fa-circle-check" style="font-size: 1.4rem; color: #10b981;"></i>
+                        <div>
+                            <div>¡Venta total completada con éxito!</div>
+                            <div style="font-size: 0.83rem; font-weight: normal; margin-top: 0.2rem; color: #a7f3d0;">${data.message}</div>
+                        </div>
+                    </div>`;
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                banner.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.95rem; padding: 0.85rem 1.1rem; border: 1px solid #ef4444; background: rgba(239, 68, 68, 0.2); color: #fca5a5; border-radius: 8px; font-weight: bold;">
+                        <i class="fa-solid fa-triangle-exclamation" style="font-size: 1.3rem; color: #ef4444;"></i>
+                        <span>Fallo al vender: ${data.message}</span>
+                    </div>`;
+                this.disabled = false;
+                this.innerHTML = '<i class="fa-solid fa-arrow-trend-down"></i> Vender 100% de la Posición Vigente';
+            }
+        } catch (e) {
+            banner.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.95rem; padding: 0.85rem 1.1rem; border: 1px solid #ef4444; background: rgba(239, 68, 68, 0.2); color: #fca5a5; border-radius: 8px; font-weight: bold;">
+                    <i class="fa-solid fa-triangle-exclamation" style="font-size: 1.3rem; color: #ef4444;"></i>
+                    <span>Error o tiempo de espera agotado al ejecutar la venta: ${e.message || 'Sin conexión'}</span>
+                </div>`;
+            this.disabled = false;
+            this.innerHTML = '<i class="fa-solid fa-arrow-trend-down"></i> Vender 100% de la Posición Vigente';
+        }
+    });
+
+    // Actualizar cada 5 segundos
+    updateLivePrice();
+    setInterval(updateLivePrice, 5000);
+</script>
+{% endblock %}

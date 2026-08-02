@@ -1,0 +1,212 @@
+{% extends 'base.html' %}
+
+{% block title %}Base de Datos PostgreSQL | FORTINET TRADING BOT{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <h1 class="page-title"><i class="fa-solid fa-database" style="color: #3b82f6;"></i> Explorador de Base de Datos PostgreSQL</h1>
+        <p class="page-description">
+            Visualiza los registros de velas de 15 minutos almacenados en PostgreSQL en tiempo real con todas sus columnas de métricas de trading precalculadas.
+        </p>
+    </div>
+    <div style="display: flex; align-items: center; gap: 1rem;">
+        <label style="font-size: 0.85rem; color: var(--text-muted);">Registros por página:</label>
+        <select id="select-per-page" class="form-control" style="padding: 0.35rem 0.6rem; font-size: 0.85rem; background: #1e293b; color: #fff; border: 1px solid var(--border-color); border-radius: 6px;">
+            <option value="25" selected>25</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="200">200</option>
+        </select>
+    </div>
+</div>
+
+<div class="card" style="padding: 1.25rem;">
+    <!-- Barra de Paginación Superior -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem; font-size: 0.9rem;">
+        <div>
+            Mostrando página <strong id="current-page-text" style="color: #38bdf8;">1</strong> de <strong id="total-pages-text" style="color: #fff;">1</strong> 
+            (<span id="total-records-text" style="color: #cbd5e1;">0</span> registros totales en PostgreSQL)
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <button id="btn-prev-page" class="btn btn-secondary" style="padding: 0.3rem 0.75rem; font-size: 0.85rem;"><i class="fa-solid fa-chevron-left"></i> Anterior</button>
+            <button id="btn-next-page" class="btn btn-secondary" style="padding: 0.3rem 0.75rem; font-size: 0.85rem;">Siguiente <i class="fa-solid fa-chevron-right"></i></button>
+        </div>
+    </div>
+
+    <!-- Tabla con Desplazamiento Horizontal para todas las columnas -->
+    <div style="overflow-x: auto; border: 1px solid var(--border-color); border-radius: 8px; max-height: 650px;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem; white-space: nowrap; text-align: right;">
+            <thead style="position: sticky; top: 0; background: #1e293b; color: #94a3b8; border-bottom: 2px solid var(--border-color); z-index: 5;">
+                <tr>
+                    <th style="padding: 0.6rem 0.8rem; color: #38bdf8; text-align: left;">Fecha / Hora</th>
+                    <th style="padding: 0.6rem 0.8rem; color: #c084fc;">Año (ML)</th>
+                    <th style="padding: 0.6rem 0.8rem; color: #c084fc;">Mes (ML)</th>
+                    <th style="padding: 0.6rem 0.8rem; color: #fbbf24;">Semana # (ML) 🌟</th>
+                    <th style="padding: 0.6rem 0.8rem; color: #c084fc;">Día (ML)</th>
+                    <th style="padding: 0.6rem 0.8rem; color: #38bdf8;">Día Sem (ML)</th>
+                    <th style="padding: 0.6rem 0.8rem; color: #94a3b8;">Hora (ML)</th>
+                    <th style="padding: 0.6rem 0.8rem; color: #94a3b8;">Minuto (ML)</th>
+                    <th style="padding: 0.6rem 0.8rem;">Open</th>
+                    <th style="padding: 0.6rem 0.8rem; color: #10b981;">High</th>
+                    <th style="padding: 0.6rem 0.8rem; color: #ef4444;">Low</th>
+                    <th style="padding: 0.6rem 0.8rem; color: #ffffff;">Close</th>
+                    <th style="padding: 0.6rem 0.8rem;">Volume</th>
+                    <th style="padding: 0.6rem 0.8rem; color: #f59e0b;">EMA 9</th>
+                    <th style="padding: 0.6rem 0.8rem; color: #f59e0b;">Slope EMA9 %</th>
+                    <th style="padding: 0.6rem 0.8rem; color: #a855f7;">EMA 21</th>
+                    <th style="padding: 0.6rem 0.8rem; color: #a855f7;">Slope EMA21 %</th>
+                    <th style="padding: 0.6rem 0.8rem; color: #06b6d4;">EMA 35</th>
+                    <th style="padding: 0.6rem 0.8rem; color: #06b6d4;">Slope EMA35 %</th>
+                    <th style="padding: 0.6rem 0.8rem; color: #ec4899;">EMA 50</th>
+                    <th style="padding: 0.6rem 0.8rem; color: #ec4899;">Slope EMA50 %</th>
+                    <th style="padding: 0.6rem 0.8rem; color: #3b82f6;">EMA 100</th>
+                    <th style="padding: 0.6rem 0.8rem; color: #3b82f6;">Slope EMA100 %</th>
+                    <th style="padding: 0.6rem 0.8rem; color: #1d4ed8;">EMA 200</th>
+                    <th style="padding: 0.6rem 0.8rem; color: #1d4ed8;">Slope EMA200 %</th>
+                    <th style="padding: 0.6rem 0.8rem; color: #10b981;">RSI (14)</th>
+                    <th style="padding: 0.6rem 0.8rem; color: #e11d48;">MACD</th>
+                    <th style="padding: 0.6rem 0.8rem; color: #e11d48;">MACD Signal</th>
+                    <th style="padding: 0.6rem 0.8rem; color: #e11d48;">MACD Hist</th>
+                    <th style="padding: 0.6rem 0.8rem; color: #8b5cf6;">ATR (14)</th>
+                </tr>
+            </thead>
+            <tbody id="table-candles-body">
+                <tr>
+                    <td colspan="30" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                        <i class="fa-solid fa-circle-notch fa-spin"></i> Cargando registros desde PostgreSQL...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Barra de Paginación Inferior -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; flex-wrap: wrap; gap: 0.5rem; font-size: 0.9rem;">
+        <div id="footer-summary" style="color: var(--text-muted);">
+            Página 1
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <button id="btn-prev-page-bottom" class="btn btn-secondary" style="padding: 0.3rem 0.75rem; font-size: 0.85rem;"><i class="fa-solid fa-chevron-left"></i> Anterior</button>
+            <button id="btn-next-page-bottom" class="btn btn-secondary" style="padding: 0.3rem 0.75rem; font-size: 0.85rem;">Siguiente <i class="fa-solid fa-chevron-right"></i></button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentPage = 1;
+    let currentPerPage = 25;
+    let totalPages = 1;
+    const pad = n => (n !== null && n !== undefined) ? n.toString().padStart(2, '0') : '-';
+
+    async function loadTableData(page = 1) {
+        try {
+            const tbody = document.getElementById('table-candles-body');
+            tbody.innerHTML = `<tr><td colspan="30" style="text-align: center; padding: 2rem; color: var(--text-muted);"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando página ${page}...</td></tr>`;
+
+            const res = await fetch(`/api/database/candles?page=${page}&per_page=${currentPerPage}`);
+            const json = await res.json();
+
+            if (!json.success) {
+                tbody.innerHTML = `<tr><td colspan="30" style="text-align: center; padding: 2rem; color: var(--danger);">Error: ${json.message}</td></tr>`;
+                return;
+            }
+
+            const data = json.data;
+            currentPage = data.page;
+            totalPages = data.total_pages;
+
+            document.getElementById('current-page-text').innerText = currentPage;
+            document.getElementById('total-pages-text').innerText = totalPages;
+            document.getElementById('total-records-text').innerText = data.total_records.toLocaleString();
+            document.getElementById('footer-summary').innerText = `Página ${currentPage} de ${totalPages} (${data.total_records.toLocaleString()} registros en BD)`;
+
+            document.getElementById('btn-prev-page').disabled = (currentPage <= 1);
+            document.getElementById('btn-prev-page-bottom').disabled = (currentPage <= 1);
+            document.getElementById('btn-next-page').disabled = (currentPage >= totalPages);
+            document.getElementById('btn-next-page-bottom').disabled = (currentPage >= totalPages);
+
+            if (data.records.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="30" style="text-align: center; padding: 2rem; color: var(--text-muted);">No hay registros en la base de datos.</td></tr>`;
+                return;
+            }
+
+            let html = '';
+            data.records.forEach((r, idx) => {
+                const dateObj = new Date(r.time);
+                const dateStr = formatDate(dateObj);
+                const bg = idx % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent';
+
+                html += `<tr style="background: ${bg}; border-bottom: 1px solid rgba(255,255,255,0.04);">
+                    <td style="padding: 0.45rem 0.8rem; text-align: left; font-weight: 600; color: #38bdf8;">${dateStr}</td>
+                    <td style="padding: 0.45rem 0.8rem; color: #c084fc; font-weight: 600;">${r.year_ml || dateObj.getFullYear()}</td>
+                    <td style="padding: 0.45rem 0.8rem; color: #c084fc; font-weight: 600;">${r.month_ml || (dateObj.getMonth()+1)}</td>
+                    <td style="padding: 0.45rem 0.8rem; color: #fbbf24; font-weight: 700;">Sem ${r.week_ml || '-'}</td>
+                    <td style="padding: 0.45rem 0.8rem; color: #c084fc;">${r.day_ml || dateObj.getDate()}</td>
+                    <td style="padding: 0.45rem 0.8rem; color: #38bdf8; font-weight: 600;">${r.day_name_ml || '-'}</td>
+                    <td style="padding: 0.45rem 0.8rem; color: #94a3b8;">${r.hour_ml !== undefined && r.hour_ml !== null ? pad(r.hour_ml) + ':00' : pad(dateObj.getHours()) + ':00'}</td>
+                    <td style="padding: 0.45rem 0.8rem; color: #94a3b8;">${r.minute_ml !== undefined && r.minute_ml !== null ? pad(r.minute_ml) : pad(dateObj.getMinutes())}</td>
+                    <td style="padding: 0.45rem 0.8rem; color: #e2e8f0;">$${fmt(r.open)}</td>
+                    <td style="padding: 0.45rem 0.8rem; color: #10b981;">$${fmt(r.high)}</td>
+                    <td style="padding: 0.45rem 0.8rem; color: #ef4444;">$${fmt(r.low)}</td>
+                    <td style="padding: 0.45rem 0.8rem; font-weight: bold; color: #ffffff;">$${fmt(r.close)}</td>
+                    <td style="padding: 0.45rem 0.8rem; color: #cbd5e1;">${fmt(r.volume, 4)}</td>
+                    <td style="padding: 0.45rem 0.8rem; color: #f59e0b;">${fmt(r.ema9)}</td>
+                    <td style="padding: 0.45rem 0.8rem; color: ${r.ema9_slope_pct >= 0 ? '#10b981' : '#ef4444'};">${fmtPct(r.ema9_slope_pct)}</td>
+                    <td style="padding: 0.45rem 0.8rem; color: #a855f7;">${fmt(r.ema21)}</td>
+                    <td style="padding: 0.45rem 0.8rem; color: ${r.ema21_slope_pct >= 0 ? '#10b981' : '#ef4444'};">${fmtPct(r.ema21_slope_pct)}</td>
+                    <td style="padding: 0.45rem 0.8rem; color: #06b6d4;">${fmt(r.ema35)}</td>
+                    <td style="padding: 0.45rem 0.8rem; color: ${r.ema35_slope_pct >= 0 ? '#10b981' : '#ef4444'};">${fmtPct(r.ema35_slope_pct)}</td>
+                    <td style="padding: 0.45rem 0.8rem; color: #ec4899;">${fmt(r.ema50)}</td>
+                    <td style="padding: 0.45rem 0.8rem; color: ${r.ema50_slope_pct >= 0 ? '#10b981' : '#ef4444'};">${fmtPct(r.ema50_slope_pct)}</td>
+                    <td style="padding: 0.45rem 0.8rem; color: #3b82f6;">${fmt(r.ema100)}</td>
+                    <td style="padding: 0.45rem 0.8rem; color: ${r.ema100_slope_pct >= 0 ? '#10b981' : '#ef4444'};">${fmtPct(r.ema100_slope_pct)}</td>
+                    <td style="padding: 0.45rem 0.8rem; color: #1d4ed8;">${fmt(r.ema200)}</td>
+                    <td style="padding: 0.45rem 0.8rem; color: ${r.ema200_slope_pct >= 0 ? '#10b981' : '#ef4444'};">${fmtPct(r.ema200_slope_pct)}</td>
+                    <td style="padding: 0.45rem 0.8rem; font-weight: 500; color: #10b981;">${fmt(r.rsi14, 2)}</td>
+                    <td style="padding: 0.45rem 0.8rem; color: #f43f5e;">${fmt(r.macd, 2)}</td>
+                    <td style="padding: 0.45rem 0.8rem; color: #f43f5e;">${fmt(r.macd_signal, 2)}</td>
+                    <td style="padding: 0.45rem 0.8rem; color: ${r.macd_hist >= 0 ? '#10b981' : '#ef4444'};">${fmt(r.macd_hist, 2)}</td>
+                    <td style="padding: 0.45rem 0.8rem; color: #a78bfa;">${fmt(r.atr14, 2)}</td>
+                </tr>`;
+            });
+
+            tbody.innerHTML = html;
+
+        } catch (err) {
+            console.error("Error al cargar la tabla de base de datos:", err);
+        }
+    }
+
+    function formatDate(d) {
+        const pad = n => n.toString().padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    function fmt(val, decimals = 2) {
+        if (val === null || val === undefined) return '-';
+        return Number(val).toFixed(decimals);
+    }
+
+    function fmtPct(val) {
+        if (val === null || val === undefined) return '-';
+        const num = Number(val);
+        return (num >= 0 ? '+' : '') + num.toFixed(3) + '%';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadTableData(1);
+
+        document.getElementById('btn-prev-page').addEventListener('click', () => { if (currentPage > 1) loadTableData(currentPage - 1); });
+        document.getElementById('btn-prev-page-bottom').addEventListener('click', () => { if (currentPage > 1) loadTableData(currentPage - 1); });
+
+        document.getElementById('btn-next-page').addEventListener('click', () => { if (currentPage < totalPages) loadTableData(currentPage + 1); });
+        document.getElementById('btn-next-page-bottom').addEventListener('click', () => { if (currentPage < totalPages) loadTableData(currentPage + 1); });
+
+        document.getElementById('select-per-page').addEventListener('change', (e) => {
+            currentPerPage = parseInt(e.target.value);
+            loadTableData(1);
+        });
+    });
+</script>
+{% endblock %}

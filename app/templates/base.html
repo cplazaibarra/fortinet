@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}FORTINET TRADING BOT{% endblock %}</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom Style -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    <!-- TradingView Lightweight Charts Local -->
+    <script src="{{ url_for('static', filename='js/lightweight-charts.standalone.production.js') }}"></script>
+    
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <header>
+        <div class="navbar">
+            <div class="logo">
+                <a href="{{ url_for('dashboard') }}">
+                    <i class="fa-brands fa-bitcoin" style="color: #f7931a; font-size: 1.8rem;"></i>
+                    <span>FORTINET TRADING BOT</span>
+                </a>
+            </div>
+            <nav>
+                <ul class="nav-links">
+                    <li class="{% if active_page == 'dashboard' %}active{% endif %}">
+                        <a href="{{ url_for('dashboard') }}"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+                    </li>
+                    <li class="{% if active_page == 'strategy_entry_1' or active_page == 'strategy_entry' %}active{% endif %}">
+                        <a href="{{ url_for('strategy_entry', profile=1) }}"><i class="fa-solid fa-1"></i> Entrada E1</a>
+                    </li>
+                    <li class="{% if active_page == 'strategy_exit_1' or active_page == 'strategy_exit' %}active{% endif %}">
+                        <a href="{{ url_for('strategy_exit', profile=1) }}"><i class="fa-solid fa-1"></i> Salida E1</a>
+                    </li>
+                    <li class="{% if active_page == 'strategy_entry_2' %}active{% endif %}">
+                        <a href="{{ url_for('strategy_entry', profile=2) }}" style="color: #67e8f9;"><i class="fa-solid fa-2"></i> Entrada E2</a>
+                    </li>
+                    <li class="{% if active_page == 'strategy_exit_2' %}active{% endif %}">
+                        <a href="{{ url_for('strategy_exit', profile=2) }}" style="color: #67e8f9;"><i class="fa-solid fa-2"></i> Salida E2</a>
+                    </li>
+                    <li class="{% if active_page == 'chart' %}active{% endif %}">
+                        <a href="{{ url_for('chart_page') }}"><i class="fa-solid fa-chart-candlestick"></i> Gráfica FTNT</a>
+                    </li>
+                    <li class="{% if active_page == 'simulation_view' %}active{% endif %}">
+                        <a href="{{ url_for('simulation_page') }}"><i class="fa-solid fa-calculator"></i> Simulación</a>
+                    </li>
+                    <li class="{% if active_page == 'database_view' %}active{% endif %}">
+                        <a href="{{ url_for('database_page') }}"><i class="fa-solid fa-database"></i> Base de Datos</a>
+                    </li>
+                    <li class="{% if active_page == 'logs' %}active{% endif %}">
+                        <a href="{{ url_for('logs_page') }}"><i class="fa-solid fa-clipboard-list"></i> Logs</a>
+                    </li>
+                    <li class="{% if active_page == 'settings' %}active{% endif %}">
+                        <a href="{{ url_for('settings_page') }}"><i class="fa-solid fa-gears"></i> Configuración</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Barra de Estado de Sincronización PostgreSQL y Monitoreo de 3 Velas -->
+    <div id="pg-sync-bar" style="background: rgba(30, 41, 59, 0.85); border-bottom: 1px solid var(--border-color); padding: 0.45rem 1.5rem; font-size: 0.82rem; display: flex; justify-content: space-between; align-items: center; color: var(--text-muted); flex-wrap: wrap; gap: 0.5rem;">
+        <div style="display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
+            <div>
+                <i class="fa-solid fa-database" style="color: #3b82f6; margin-right: 0.35rem;"></i>
+                <strong>PostgreSQL (15m):</strong> 
+                <span id="pg-sync-progress" style="color: #fff; font-weight: 500;">Cargando...</span>
+            </div>
+            <div>
+                <i class="fa-solid fa-clock-rotate-left" style="color: #a855f7; margin-right: 0.35rem;"></i>
+                <strong>Rango Guardado:</strong> 
+                <span id="pg-sync-range" style="color: #cbd5e1;">-</span>
+            </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <div id="pg-monitoring-badge" style="display: flex; align-items: center; gap: 0.4rem; background: rgba(16, 185, 129, 0.15); border: 1px solid var(--success); color: #6ee7b7; padding: 0.25rem 0.75rem; border-radius: 20px; font-weight: 600; font-size: 0.8rem;">
+                <i class="fa-solid fa-circle-check"></i> Monitoreo Activo (Últimas 3 Velas Al Día)
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function updateSyncStatusWidget() {
+            try {
+                const res = await fetch('/api/sync/status');
+                const data = await res.json();
+                if (data.success && data.sync) {
+                    const s = data.sync;
+                    const progElem = document.getElementById('pg-sync-progress');
+                    const rangeElem = document.getElementById('pg-sync-range');
+                    const badgeElem = document.getElementById('pg-monitoring-badge');
+
+                    if (progElem) {
+                        progElem.innerHTML = `<span style="color: #38bdf8; font-weight: bold;">${s.total_candles.toLocaleString()}</span> / ${s.target_candles.toLocaleString()} velas (${s.progress_pct}%) - <strong style="color: ${s.status === 'Sincronizado' ? '#10b981' : '#f59e0b'};">${s.status}</strong>`;
+                    }
+                    if (rangeElem) {
+                        rangeElem.innerText = `${s.oldest_date} ➔ ${s.newest_date}`;
+                    }
+                    if (badgeElem) {
+                        if (s.is_live_monitoring_ok) {
+                            badgeElem.style.background = 'rgba(16, 185, 129, 0.15)';
+                            badgeElem.style.borderColor = 'var(--success)';
+                            badgeElem.style.color = '#6ee7b7';
+                            badgeElem.innerHTML = `<i class="fa-solid fa-circle-check"></i> Monitoreo Activo (Últimas 3 Velas Al Día)`;
+                        } else {
+                            badgeElem.style.background = 'rgba(245, 158, 11, 0.15)';
+                            badgeElem.style.borderColor = '#f59e0b';
+                            badgeElem.style.color = '#fde047';
+                            badgeElem.innerHTML = `<i class="fa-solid fa-arrows-rotate fa-spin"></i> Monitoreo Sincronizando Velas Recientes...`;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn("Error al consultar estado de sincronización:", e);
+            }
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+            updateSyncStatusWidget();
+            setInterval(updateSyncStatusWidget, 8000);
+        });
+    </script>
+
+    <main>
+        <!-- Mensajes Flash de Flask -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category if category != 'error' else 'danger' }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer>
+        <p>&copy; 2026 FORTINET TRADING BOT. Desarrollado localmente. Proyecto de Trading Automatizado de FTNT.</p>
+    </footer>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

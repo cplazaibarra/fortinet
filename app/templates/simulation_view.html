@@ -1,0 +1,489 @@
+{% extends 'base.html' %}
+
+{% block title %}Simulador & Filtro de Machine Learning | FORTINET TRADING BOT{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <h1 class="page-title"><i class="fa-solid fa-brain" style="color: #a855f7;"></i> Simulador Histórico & Filtro de Machine Learning</h1>
+        <p class="page-description">
+            Compara el desempeño de la Estrategia Base frente a la versión optimizada con el Filtro Inteligente de Machine Learning (ML).
+        </p>
+    </div>
+    <button type="button" onclick="manualRetrainML(this)" class="btn btn-secondary" style="padding: 0.6rem 1.1rem; font-size: 0.9rem; border-color: #a855f7; color: #e9d5ff; background: rgba(168, 85, 247, 0.15);">
+        <i class="fa-solid fa-brain" style="color: #a855f7;"></i> Re-entrenar Modelo ML Ahora
+    </button>
+</div>
+
+<!-- Selector de Perfil de Estrategia para la Simulación -->
+<div style="display: flex; gap: 0.75rem; margin-bottom: 1.25rem; align-items: center; flex-wrap: wrap; background: #1e293b; padding: 0.75rem 1rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08);">
+    <span style="font-weight: bold; color: #cbd5e1; font-size: 0.9rem; margin-right: 0.5rem;"><i class="fa-solid fa-layer-group"></i> Perfil de Estrategia a Simular:</span>
+    <button type="button" onclick="selectSimProfile(1)" id="btn-sim-profile-1" class="btn" style="padding: 0.5rem 1rem; font-size: 0.88rem; font-weight: bold; border-radius: 6px; background: rgba(168, 85, 247, 0.3); color: #e9d5ff; border: 1px solid #a855f7;">
+        <i class="fa-solid fa-1"></i> Perfil 1 (Estrategia Principal)
+    </button>
+    <button type="button" onclick="selectSimProfile(2)" id="btn-sim-profile-2" class="btn" style="padding: 0.5rem 1rem; font-size: 0.88rem; font-weight: bold; border-radius: 6px; background: rgba(15, 23, 42, 0.6); color: #cbd5e1; border: 1px solid rgba(255,255,255,0.1);">
+        <i class="fa-solid fa-2"></i> Perfil 2 (Impulso / Breakouts / Alternativa)
+    </button>
+</div>
+
+<!-- Banner de Reglas de Estrategia Activas -->
+<div style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; padding: 0.85rem 1.25rem; margin-bottom: 1.25rem; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem;">
+    <div style="flex: 1; min-width: 280px;">
+        <div style="font-weight: bold; color: #c084fc; font-size: 0.92rem; margin-bottom: 0.35rem;">
+            <i class="fa-solid fa-sliders"></i> Reglas Activas Evaluadas en esta Simulación (Perfil <span id="sim-active-profile-num">1</span>):
+        </div>
+        <div style="font-size: 0.84rem; color: #cbd5e1; display: flex; align-items: baseline; gap: 0.4rem; margin-bottom: 0.2rem;">
+            <span style="color: #10b981; font-weight: bold; min-width: 105px;"><i class="fa-solid fa-right-to-bracket"></i> Entrada (AND):</span>
+            <span id="sim-entry-rules-text" style="color: #e2e8f0; font-size: 0.82rem;">Cargando...</span>
+        </div>
+        <div style="font-size: 0.84rem; color: #cbd5e1; display: flex; align-items: baseline; gap: 0.4rem;">
+            <span style="color: #ef4444; font-weight: bold; min-width: 105px;"><i class="fa-solid fa-right-from-bracket"></i> Salida (OR):</span>
+            <span id="sim-exit-rules-text" style="color: #e2e8f0; font-size: 0.82rem;">Cargando...</span>
+        </div>
+    </div>
+    </div>
+    <div style="display: flex; gap: 0.75rem;">
+        <div style="background: rgba(6, 182, 212, 0.15); padding: 0.6rem 1rem; border-radius: 8px; border: 1px solid rgba(6, 182, 212, 0.3); text-align: center;">
+            <div style="font-size: 0.75rem; color: #67e8f9; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;"><i class="fa-solid fa-arrow-trend-down"></i> Trailing Stop</div>
+            <div id="sim-trailing-stop-text" style="font-size: 1.25rem; font-weight: bold; color: #06b6d4;">-0.7%</div>
+        </div>
+        <div style="background: rgba(168, 85, 247, 0.15); padding: 0.6rem 1rem; border-radius: 8px; border: 1px solid rgba(168, 85, 247, 0.3); text-align: center;">
+            <div style="font-size: 0.75rem; color: #e9d5ff; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;"><i class="fa-solid fa-brain"></i> Filtro ML Min.</div>
+            <div id="sim-ml-threshold-text" style="font-size: 1.25rem; font-weight: bold; color: #a855f7;">50.0%</div>
+        </div>
+    </div>
+</div>
+
+<!-- Comparativa Frente a Frente: Sin ML vs Con Filtro ML -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem;">
+    <!-- Panel 1: Estrategia Base (Sin ML) -->
+    <div class="card" style="padding: 1.25rem; border-top: 4px solid #64748b;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <span style="font-weight: bold; font-size: 1.1rem; color: #cbd5e1;"><i class="fa-solid fa-chart-line"></i> Estrategia Base (Sin ML)</span>
+            <span style="background: rgba(100, 116, 139, 0.2); color: #cbd5e1; padding: 0.2rem 0.5rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600;">100% Reglas</span>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+            <div>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">Capital Final</div>
+                <div id="base-final-capital" style="font-size: 1.25rem; font-weight: bold; color: #fff;">$10,000.00 USDT</div>
+            </div>
+            <div>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">Ganancia Neta</div>
+                <div id="base-net-pnl" style="font-size: 1.25rem; font-weight: bold; color: #10b981;">+$0.00 USDT</div>
+            </div>
+            <div>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">Tasa de Aciertos</div>
+                <div id="base-winrate" style="font-size: 1.1rem; font-weight: bold; color: #38bdf8;">0%</div>
+            </div>
+            <div>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">Trades Ejecutados</div>
+                <div id="base-trades-count" style="font-size: 1.1rem; font-weight: bold; color: #fff;">0</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel 2: Estrategia Con Filtro de Machine Learning -->
+    <div class="card" style="padding: 1.25rem; border-top: 4px solid #a855f7; background: linear-gradient(180deg, rgba(168, 85, 247, 0.08) 0%, rgba(15, 23, 42, 0) 100%);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <span style="font-weight: bold; font-size: 1.1rem; color: #c084fc;"><i class="fa-solid fa-robot"></i> Estrategia con Filtro ML</span>
+            <span style="background: rgba(168, 85, 247, 0.25); color: #e9d5ff; border: 1px solid #a855f7; padding: 0.2rem 0.55rem; border-radius: 6px; font-size: 0.75rem; font-weight: bold;">ML Filtro Inteligente</span>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+            <div>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">Capital Final Con ML</div>
+                <div id="ml-final-capital" style="font-size: 1.25rem; font-weight: bold; color: #c084fc;">$10,000.00 USDT</div>
+            </div>
+            <div>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">Ganancia Neta Con ML</div>
+                <div id="ml-net-pnl" style="font-size: 1.25rem; font-weight: bold; color: #10b981;">+$0.00 USDT</div>
+            </div>
+            <div>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">Win Rate Con ML</div>
+                <div id="ml-winrate" style="font-size: 1.1rem; font-weight: bold; color: #38bdf8;">0%</div>
+            </div>
+            <div>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">Trades Ejecutados Con ML</div>
+                <div id="ml-trades-count" style="font-size: 1.1rem; font-weight: bold; color: #fff;">0</div>
+            </div>
+            <div>
+                <div style="font-size: 0.8rem; color: #6ee7b7;">🛡️ Pérdidas Bloqueadas</div>
+                <div id="ml-filtered-losses" style="font-size: 0.95rem; font-weight: bold; color: #10b981;">0 perdedoras (-$0.00 USDT)</div>
+            </div>
+            <div>
+                <div style="font-size: 0.8rem; color: #fca5a5;">⚠️ Ganadas Bloqueadas</div>
+                <div id="ml-filtered-wins" style="font-size: 0.95rem; font-weight: bold; color: #f87171;">0 ganadas (+$0.00 USDT)</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Barra de Filtro por Fechas y Presets Rápidos -->
+<div class="card" style="margin-bottom: 1.5rem; padding: 1rem 1.25rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+            <i class="fa-solid fa-calendar-days" style="color: #3b82f6; font-size: 1.1rem;"></i>
+            <span style="font-weight: 600; font-size: 0.95rem;">Filtrar Período de Simulación:</span>
+            
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <label style="font-size: 0.85rem; color: var(--text-muted);">Desde:</label>
+                <input type="datetime-local" id="filter-start-date" style="padding: 0.35rem 0.6rem; font-size: 0.85rem; background: #1e293b; color: #fff; border: 1px solid var(--border-color); border-radius: 6px; color-scheme: dark;">
+            </div>
+            
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <label style="font-size: 0.85rem; color: var(--text-muted);">Hasta:</label>
+                <input type="datetime-local" id="filter-end-date" style="padding: 0.35rem 0.6rem; font-size: 0.85rem; background: #1e293b; color: #fff; border: 1px solid var(--border-color); border-radius: 6px; color-scheme: dark;">
+            </div>
+
+            <button id="btn-apply-sim-filter" class="btn btn-primary" style="padding: 0.35rem 0.9rem; font-size: 0.85rem; display: flex; align-items: center; gap: 0.35rem;">
+                <i class="fa-solid fa-play"></i> Ejecutar Simulación
+            </button>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+            <span style="font-size: 0.85rem; color: var(--text-muted); margin-right: 0.25rem;">Rápido:</span>
+            <button onclick="applySimPreset('24h')" data-preset="24h" class="btn btn-secondary btn-sim-preset" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;">24h</button>
+            <button onclick="applySimPreset('7d')" data-preset="7d" class="btn btn-secondary btn-sim-preset" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;">7 Días</button>
+            <button onclick="applySimPreset('1m')" data-preset="1m" class="btn btn-secondary btn-sim-preset" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;">1 Mes</button>
+            <button onclick="applySimPreset('6m')" data-preset="6m" class="btn btn-secondary btn-sim-preset" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;">6 Meses</button>
+            <button onclick="applySimPreset('1y')" data-preset="1y" class="btn btn-secondary btn-sim-preset" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;">1 Año</button>
+            <button onclick="applySimPreset('all')" data-preset="all" class="btn btn-secondary btn-sim-preset" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;">Todo (2 Años) ⚡</button>
+        </div>
+    </div>
+</div>
+
+<!-- Tabla Comparativa Detallada de Trades -->
+<div class="card" style="padding: 1.25rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem; font-size: 0.9rem;">
+        <div>
+            Mostrando operaciones (Página <strong id="current-page-text" style="color: #38bdf8;">1</strong> de <strong id="total-pages-text" style="color: #fff;">1</strong>)
+            - <span id="total-records-text" style="color: #cbd5e1;">0</span> señales totales
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <select id="select-per-page" class="form-control" style="padding: 0.3rem 0.5rem; font-size: 0.8rem; background: #1e293b; color: #fff; border: 1px solid var(--border-color); border-radius: 6px;">
+                <option value="25">25 / pág</option>
+                <option value="50" selected>50 / pág</option>
+                <option value="100">100 / pág</option>
+            </select>
+            <div style="display: flex; align-items: center; gap: 0.4rem;">
+                <button id="btn-prev-page" class="btn btn-secondary" style="padding: 0.3rem 0.75rem; font-size: 0.85rem;"><i class="fa-solid fa-chevron-left"></i> Anterior</button>
+                <button id="btn-next-page" class="btn btn-secondary" style="padding: 0.3rem 0.75rem; font-size: 0.85rem;">Siguiente <i class="fa-solid fa-chevron-right"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <div style="overflow-x: auto; border: 1px solid var(--border-color); border-radius: 8px; max-height: 650px;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.83rem; white-space: nowrap; text-align: right;">
+            <thead style="position: sticky; top: 0; background: #1e293b; color: #94a3b8; border-bottom: 2px solid var(--border-color); z-index: 5;">
+                <tr>
+                    <th style="padding: 0.65rem 0.8rem; text-align: center;"># Trade</th>
+                    <th style="padding: 0.65rem 0.8rem; text-align: left; color: #10b981;">▲ Entrada (BUY)</th>
+                    <th style="padding: 0.65rem 0.8rem; color: #10b981;">Precio Entra ($)</th>
+                    <th style="padding: 0.65rem 0.8rem; text-align: left; color: #ef4444;">▼ Salida (SELL)</th>
+                    <th style="padding: 0.65rem 0.8rem; color: #ef4444;">Precio Sale ($)</th>
+                    <th style="padding: 0.65rem 0.8rem; color: #cbd5e1;">PnL Sin ML ($ / %)</th>
+                    <th style="padding: 0.65rem 0.8rem; text-align: center; color: #a855f7; background: rgba(168, 85, 247, 0.15);">🤖 Decisión ML</th>
+                    <th style="padding: 0.65rem 0.8rem; color: #c084fc; background: rgba(168, 85, 247, 0.15);">PnL Con ML ($ / %)</th>
+                    <th style="padding: 0.65rem 0.8rem; color: #38bdf8; background: rgba(168, 85, 247, 0.15);">Saldo Acum. Con ML ($)</th>
+                </tr>
+            </thead>
+            <tbody id="table-simulation-body">
+                <tr>
+                    <td colspan="9" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+                        <i class="fa-solid fa-circle-notch fa-spin"></i> Cargando simulación y modelo de Machine Learning desde PostgreSQL...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; flex-wrap: wrap; gap: 0.5rem; font-size: 0.9rem;">
+        <div id="footer-summary" style="color: var(--text-muted);">Página 1</div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <button id="btn-prev-page-bottom" class="btn btn-secondary" style="padding: 0.3rem 0.75rem; font-size: 0.85rem;"><i class="fa-solid fa-chevron-left"></i> Anterior</button>
+            <button id="btn-next-page-bottom" class="btn btn-secondary" style="padding: 0.3rem 0.75rem; font-size: 0.85rem;">Siguiente <i class="fa-solid fa-chevron-right"></i></button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentPage = 1;
+    let currentPerPage = 50;
+    let totalPages = 1;
+    let activeUrlParams = '';
+    let currentSimProfile = 1;
+
+    function selectSimProfile(profile) {
+        currentSimProfile = profile;
+        const btn1 = document.getElementById('btn-sim-profile-1');
+        const btn2 = document.getElementById('btn-sim-profile-2');
+
+        if (profile === 1) {
+            btn1.style.background = 'rgba(168, 85, 247, 0.3)';
+            btn1.style.borderColor = '#a855f7';
+            btn1.style.color = '#e9d5ff';
+            btn2.style.background = 'rgba(15, 23, 42, 0.6)';
+            btn2.style.borderColor = 'rgba(255,255,255,0.1)';
+            btn2.style.color = '#cbd5e1';
+        } else {
+            btn2.style.background = 'rgba(6, 182, 212, 0.3)';
+            btn2.style.borderColor = '#06b6d4';
+            btn2.style.color = '#67e8f9';
+            btn1.style.background = 'rgba(15, 23, 42, 0.6)';
+            btn1.style.borderColor = 'rgba(255,255,255,0.1)';
+            btn1.style.color = '#cbd5e1';
+        }
+
+        loadSimulationData(1, activeUrlParams);
+    }
+
+    async function loadSimulationData(page = 1, urlParams = '') {
+        try {
+            activeUrlParams = urlParams;
+            const tbody = document.getElementById('table-simulation-body');
+            tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 2.5rem; color: var(--text-muted);"><i class="fa-solid fa-circle-notch fa-spin"></i> Consultando registros de Perfil ${currentSimProfile} con filtro ML...</td></tr>`;
+
+            const sep = urlParams.includes('?') ? '&' : '?';
+            const res = await fetch(`/api/simulation/run${urlParams}${sep}profile=${currentSimProfile}&page=${page}&per_page=${currentPerPage}`);
+            const json = await res.json();
+
+            if (!json.success) {
+                tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 2rem; color: var(--danger);">Error: ${json.message}</td></tr>`;
+                return;
+            }
+
+            const s = json.summary;
+
+            document.getElementById('sim-active-profile-num').innerText = currentSimProfile;
+            if (s.entry_rules_text) document.getElementById('sim-entry-rules-text').innerText = s.entry_rules_text;
+            if (s.exit_rules_text) document.getElementById('sim-exit-rules-text').innerText = s.exit_rules_text;
+            if (s.trailing_stop_val) document.getElementById('sim-trailing-stop-text').innerText = s.trailing_stop_val;
+            if (s.ml_threshold_pct !== undefined) document.getElementById('sim-ml-threshold-text').innerText = `${s.ml_threshold_pct.toFixed(1)}%`;
+            
+            // Actualizar Tarjeta 1: Sin ML
+            document.getElementById('base-final-capital').innerText = `$${s.final_balance.toLocaleString('en-US', {minimumFractionDigits: 2})} USDT`;
+            const baseSign = s.total_pnl_usdt >= 0 ? '+' : '';
+            const basePnlElem = document.getElementById('base-net-pnl');
+            basePnlElem.innerText = `${baseSign}$${s.total_pnl_usdt.toLocaleString('en-US', {minimumFractionDigits: 2})} USDT (${baseSign}${s.total_return_pct}%)`;
+            basePnlElem.style.color = s.total_pnl_usdt >= 0 ? '#10b981' : '#ef4444';
+            document.getElementById('base-winrate').innerText = `${s.win_rate_pct}% (${s.winning_trades}W / ${s.losing_trades}L)`;
+            document.getElementById('base-trades-count').innerText = s.completed_trades;
+
+            // Actualizar Tarjeta 2: Con ML
+            document.getElementById('ml-final-capital').innerText = `$${s.ml_final_balance.toLocaleString('en-US', {minimumFractionDigits: 2})} USDT`;
+            const mlSign = s.ml_total_pnl_usdt >= 0 ? '+' : '';
+            const mlPnlElem = document.getElementById('ml-net-pnl');
+            mlPnlElem.innerText = `${mlSign}$${s.ml_total_pnl_usdt.toLocaleString('en-US', {minimumFractionDigits: 2})} USDT (${mlSign}${s.ml_total_return_pct}%)`;
+            mlPnlElem.style.color = s.ml_total_pnl_usdt >= 0 ? '#10b981' : '#ef4444';
+            document.getElementById('ml-winrate').innerText = `${s.ml_win_rate_pct}% (${s.ml_winning_trades}W / ${s.ml_losing_trades}L)`;
+            if (document.getElementById('ml-trades-count')) {
+                document.getElementById('ml-trades-count').innerText = s.ml_completed_trades;
+            }
+
+            const lossCount = s.ml_filtered_losses_count || 0;
+            const lossVal = s.ml_filtered_losses_val !== undefined ? s.ml_filtered_losses_val : 0;
+            document.getElementById('ml-filtered-losses').innerHTML = `${lossCount} perdedoras <span style="font-size: 0.82rem; color: #6ee7b7; font-weight: normal;">(-$${lossVal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} USDT evitados)</span>`;
+
+            const winCount = s.ml_filtered_wins_count || 0;
+            const winVal = s.ml_filtered_wins_val !== undefined ? s.ml_filtered_wins_val : 0;
+            document.getElementById('ml-filtered-wins').innerHTML = `${winCount} ganadas <span style="font-size: 0.82rem; color: #fca5a5; font-weight: normal;">(+$${winVal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} USDT no aprovechados)</span>`;
+
+            // Actualizar Paginación
+            const p = json.pagination;
+            currentPage = p.page;
+            totalPages = p.total_pages;
+
+            document.getElementById('current-page-text').innerText = currentPage;
+            document.getElementById('total-pages-text').innerText = totalPages;
+            document.getElementById('total-records-text').innerText = p.total_records.toLocaleString();
+            document.getElementById('footer-summary').innerText = `Página ${currentPage} de ${totalPages} (${p.total_records.toLocaleString()} operaciones evaluadas por ML)`;
+
+            document.getElementById('btn-prev-page').disabled = (currentPage <= 1);
+            document.getElementById('btn-prev-page-bottom').disabled = (currentPage <= 1);
+            document.getElementById('btn-next-page').disabled = (currentPage >= totalPages);
+            document.getElementById('btn-next-page-bottom').disabled = (currentPage >= totalPages);
+
+            const trades = json.trades;
+            if (trades.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">No se generaron operaciones en el período seleccionado.</td></tr>`;
+                return;
+            }
+
+            let html = '';
+            trades.forEach((t, idx) => {
+                const bg = idx % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent';
+                
+                // Sin ML PnL
+                const isBaseWin = t.pnl_usdt >= 0;
+                const baseColor = isBaseWin ? '#10b981' : '#ef4444';
+                const baseSignStr = isBaseWin ? '+' : '';
+
+                // Con ML Decisión
+                const mlApprove = (t.ml_approve === 'SI' || t.ml_approve === true);
+                const mlBadgeBg = mlApprove ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)';
+                const mlBadgeBorder = mlApprove ? '#10b981' : '#ef4444';
+                const mlBadgeColor = mlApprove ? '#6ee7b7' : '#fca5a5';
+                const mlLabel = mlApprove ? '🟢 SI' : '🔴 NO';
+
+                // Con ML PnL
+                const mlPnlVal = t.ml_pnl_usdt !== undefined ? t.ml_pnl_usdt : (mlApprove ? t.pnl_usdt : 0.0);
+                const mlPnlPctVal = t.ml_pnl_pct !== undefined ? t.ml_pnl_pct : (mlApprove ? t.pnl_pct : 0.0);
+                const isMlWin = mlPnlVal > 0;
+                const isMlZero = mlPnlVal === 0 && !mlApprove;
+                const mlPnlColor = isMlZero ? '#94a3b8' : (isMlWin ? '#10b981' : '#ef4444');
+                const mlPnlSignStr = isMlWin ? '+' : '';
+
+                html += `<tr style="background: ${bg}; border-bottom: 1px solid rgba(255,255,255,0.04);">
+                    <td style="padding: 0.55rem 0.8rem; text-align: center; font-weight: bold; color: #94a3b8;">#${t.trade_num}</td>
+                    <td style="padding: 0.55rem 0.8rem; text-align: left; color: #10b981; font-weight: 500;">${t.buy_date_str}</td>
+                    <td style="padding: 0.55rem 0.8rem; color: #cbd5e1;">$${t.buy_price.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                    <td style="padding: 0.55rem 0.8rem; text-align: left; color: #ef4444; font-weight: 500;">${t.sell_date_str}</td>
+                    <td style="padding: 0.55rem 0.8rem; color: #cbd5e1;">$${t.sell_price.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                    <td style="padding: 0.55rem 0.8rem; font-weight: 500; color: ${baseColor};">
+                        ${baseSignStr}$${t.pnl_usdt.toFixed(2)} (${baseSignStr}${t.pnl_pct.toFixed(2)}%)
+                    </td>
+                    <td style="padding: 0.55rem 0.8rem; text-align: center; background: rgba(168, 85, 247, 0.06);">
+                        <span style="background: ${mlBadgeBg}; border: 1px solid ${mlBadgeBorder}; color: ${mlBadgeColor}; padding: 0.2rem 0.5rem; border-radius: 12px; font-weight: bold; font-size: 0.78rem;">
+                            ${mlLabel} (${t.ml_confidence || 50}%)
+                        </span>
+                    </td>
+                    <td style="padding: 0.55rem 0.8rem; font-weight: bold; color: ${mlPnlColor}; background: rgba(168, 85, 247, 0.06);">
+                        ${isMlZero ? '$0.00 (Filtrada)' : `${mlPnlSignStr}$${mlPnlVal.toFixed(2)} (${mlPnlSignStr}${mlPnlPctVal.toFixed(2)}%)`}
+                    </td>
+                    <td style="padding: 0.55rem 0.8rem; font-weight: bold; color: #38bdf8; background: rgba(168, 85, 247, 0.06);">
+                        $${(t.ml_cumulative_balance || 10000.0).toLocaleString('en-US', {minimumFractionDigits: 2})}
+                    </td>
+                </tr>`;
+            });
+
+            tbody.innerHTML = html;
+
+        } catch (err) {
+            console.error("Error al ejecutar simulación con ML:", err);
+        }
+    }
+
+    function highlightSimPreset(activePresetKey) {
+        const buttons = document.querySelectorAll('.btn-sim-preset');
+        buttons.forEach(btn => {
+            if (activePresetKey && btn.getAttribute('data-preset') === activePresetKey) {
+                btn.style.background = 'rgba(168, 85, 247, 0.25)';
+                btn.style.borderColor = '#a855f7';
+                btn.style.color = '#e9d5ff';
+                btn.style.fontWeight = 'bold';
+            } else {
+                btn.style.background = 'var(--surface-color-light, #2a2e3d)';
+                btn.style.borderColor = 'var(--border-color, rgba(255, 255, 255, 0.1))';
+                btn.style.color = '#cbd5e1';
+                btn.style.fontWeight = 'normal';
+            }
+        });
+    }
+
+    function applySimPreset(presetKey) {
+        highlightSimPreset(presetKey);
+        const nowMs = Date.now();
+        let startTs = null;
+        const endTs = nowMs;
+
+        if (presetKey === '24h') {
+            startTs = nowMs - (24 * 60 * 60 * 1000);
+        } else if (presetKey === '7d') {
+            startTs = nowMs - (7 * 24 * 60 * 60 * 1000);
+        } else if (presetKey === '1m') {
+            startTs = nowMs - (30 * 24 * 60 * 60 * 1000);
+        } else if (presetKey === '6m') {
+            startTs = nowMs - (180 * 24 * 60 * 60 * 1000);
+        } else if (presetKey === '1y') {
+            startTs = nowMs - (365 * 24 * 60 * 60 * 1000);
+        } else if (presetKey === 'all') {
+            // Para 2 años: leer toda la tabla pre-calculada sin filtro de fechas (más rápido)
+            const startElem = document.getElementById('filter-start-date');
+            const endElem = document.getElementById('filter-end-date');
+            const twoYearsAgo = new Date(nowMs - (2 * 365 * 24 * 60 * 60 * 1000));
+            if (startElem) startElem.value = formatDateForInput(twoYearsAgo);
+            if (endElem) endElem.value = formatDateForInput(new Date(nowMs));
+            loadSimulationData(1, '');
+            return;
+        }
+
+        if (startTs) {
+            const startElem = document.getElementById('filter-start-date');
+            const endElem = document.getElementById('filter-end-date');
+            if (startElem) startElem.value = formatDateForInput(new Date(startTs));
+            if (endElem) endElem.value = formatDateForInput(new Date(endTs));
+            // Filtrar desde la tabla pre-calculada por rango de fechas (rápido, sin re-simulación)
+            loadSimulationData(1, `?start_ts=${startTs}&end_ts=${endTs}`);
+        }
+    }
+
+    function applyCustomSimFilter() {
+        highlightSimPreset(null);
+        const startElem = document.getElementById('filter-start-date');
+        const endElem = document.getElementById('filter-end-date');
+        if (!startElem || !endElem || !startElem.value || !endElem.value) return;
+
+        const startTs = new Date(startElem.value).getTime();
+        const endTs = new Date(endElem.value).getTime();
+        if (isNaN(startTs) || isNaN(endTs) || startTs >= endTs) return;
+
+        loadSimulationData(1, `?start_ts=${startTs}&end_ts=${endTs}`);
+    }
+
+    function formatDateForInput(date) {
+        const pad = (n) => n.toString().padStart(2, '0');
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    }
+
+    async function manualRetrainML(btn) {
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Re-entrenando Modelo ML Perfil ${currentSimProfile}...`;
+        }
+        try {
+            const res = await fetch('/api/ml/retrain', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ profile: currentSimProfile })
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert(`¡Modelo ML Perfil ${currentSimProfile} Re-entrenado! ` + (data.message || ''));
+                loadSimulationData(1, activeUrlParams);
+            } else {
+                alert("No se pudo re-entrenar: " + data.message);
+            }
+        } catch (e) {
+            alert("Error de red al intentar re-entrenar el modelo ML.");
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-brain" style="color: #a855f7;"></i> Re-entrenar Modelo ML Ahora';
+            }
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // Leer parámetro profile de la URL si viene especificado
+        const urlParams = new URLSearchParams(window.location.search);
+        const pParam = parseInt(urlParams.get('profile'));
+        if (pParam === 1 || pParam === 2) {
+            currentSimProfile = pParam;
+        }
+        selectSimProfile(currentSimProfile);
+        highlightSimPreset('all');
+
+        document.getElementById('btn-apply-sim-filter').addEventListener('click', applyCustomSimFilter);
+
+        document.getElementById('btn-prev-page').addEventListener('click', () => { if (currentPage > 1) loadSimulationData(currentPage - 1, activeUrlParams); });
+        document.getElementById('btn-prev-page-bottom').addEventListener('click', () => { if (currentPage > 1) loadSimulationData(currentPage - 1, activeUrlParams); });
+
+        document.getElementById('btn-next-page').addEventListener('click', () => { if (currentPage < totalPages) loadSimulationData(currentPage + 1, activeUrlParams); });
+        document.getElementById('btn-next-page-bottom').addEventListener('click', () => { if (currentPage < totalPages) loadSimulationData(currentPage + 1, activeUrlParams); });
+
+        document.getElementById('select-per-page').addEventListener('change', (e) => {
+            currentPerPage = parseInt(e.target.value);
+            loadSimulationData(1, activeUrlParams);
+        });
+    });
+</script>
+{% endblock %}

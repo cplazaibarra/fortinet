@@ -1,0 +1,461 @@
+{% extends 'base.html' %}
+
+{% block title %}Estrategia de Entrada | FORTINET TRADING BOT{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <h1 class="page-title">Estrategia de Entrada</h1>
+        <p class="page-description">Define las condiciones requeridas para comprar FTNT.</p>
+    </div>
+    <button type="button" id="btn-manual-retrain-ml" class="btn btn-secondary" style="padding: 0.6rem 1.1rem; font-size: 0.9rem; border-color: #a855f7; color: #e9d5ff; background: rgba(168, 85, 247, 0.15);">
+        <i class="fa-solid fa-brain" style="color: #a855f7;"></i> Re-entrenar Modelo ML Manualmente
+    </button>
+</div>
+
+<div class="grid grid-2" style="gap: 1.25rem; margin-bottom: 1.5rem;">
+    <!-- Card 1: Gestión de Capital -->
+    <div class="card" style="margin-bottom: 0;">
+        <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>💰 Gestión de Capital (USD)</span>
+            <i class="fa-solid fa-coins" style="color: #f59e0b; font-size: 1.2rem;"></i>
+        </div>
+        <p style="margin-top: 0.5rem; color: var(--text-muted); font-size: 0.85rem;">
+            Monto en dólares (USDT) asignado por orden.
+        </p>
+
+        <div style="display: flex; align-items: center; gap: 0.75rem; margin-top: 0.75rem; flex-wrap: wrap;">
+            <div style="position: relative; width: 140px;">
+                <span style="position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%); color: #10b981; font-weight: bold;">$</span>
+                <input type="number" step="any" id="entry-trade-size-input" class="form-control" value="{{ settings.trade_size_usd }}" style="padding-left: 1.8rem; font-size: 1.1rem; font-weight: bold; color: #10b981; background: #1e293b; border-color: #10b981;">
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 0.3rem; flex-wrap: wrap;">
+                <button type="button" onclick="setEntrySize(100)" data-size="100" class="btn btn-secondary btn-size-preset" style="padding: 0.3rem 0.5rem; font-size: 0.78rem;">$100</button>
+                <button type="button" onclick="setEntrySize(500)" data-size="500" class="btn btn-secondary btn-size-preset" style="padding: 0.3rem 0.5rem; font-size: 0.78rem;">$500</button>
+                <button type="button" onclick="setEntrySize(1000)" data-size="1000" class="btn btn-secondary btn-size-preset" style="padding: 0.3rem 0.5rem; font-size: 0.78rem;">$1,000</button>
+                <button type="button" onclick="setEntrySize(2500)" data-size="2500" class="btn btn-secondary btn-size-preset" style="padding: 0.3rem 0.5rem; font-size: 0.78rem;">$2,500</button>
+                <button type="button" onclick="setEntrySize('full')" data-size="full" class="btn btn-secondary btn-size-preset" style="padding: 0.3rem 0.5rem; font-size: 0.78rem;">100%</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 2: Umbral de Confianza ML -->
+    <div class="card" style="margin-bottom: 0;">
+        <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>🤖 Filtro ML: Umbral de Confianza (%)</span>
+            <i class="fa-solid fa-brain" style="color: #a855f7; font-size: 1.2rem;"></i>
+        </div>
+        <p style="margin-top: 0.5rem; color: var(--text-muted); font-size: 0.85rem;">
+            Porcentaje mínimo de certeza que requiere el modelo ML para aprobar una compra.
+        </p>
+
+        <div style="display: flex; align-items: center; gap: 0.75rem; margin-top: 0.75rem; flex-wrap: wrap;">
+            <div style="position: relative; width: 130px;">
+                <input type="number" step="1" id="ml-threshold-input" class="form-control" value="{{ settings.ml_threshold_pct or '50.0' }}" style="padding-right: 1.8rem; font-size: 1.1rem; font-weight: bold; color: #a855f7; background: #1e293b; border-color: #a855f7;">
+                <span style="position: absolute; right: 0.8rem; top: 50%; transform: translateY(-50%); color: #a855f7; font-weight: bold;">%</span>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 0.3rem; flex-wrap: wrap;">
+                <button type="button" onclick="setMLThreshold(40)" data-thresh="40" class="btn btn-secondary btn-thresh-preset" style="padding: 0.3rem 0.5rem; font-size: 0.78rem;">40%</button>
+                <button type="button" onclick="setMLThreshold(45)" data-thresh="45" class="btn btn-secondary btn-thresh-preset" style="padding: 0.3rem 0.5rem; font-size: 0.78rem;">45%</button>
+                <button type="button" onclick="setMLThreshold(50)" data-thresh="50" class="btn btn-secondary btn-thresh-preset" style="padding: 0.3rem 0.5rem; font-size: 0.78rem;">50% (Óptimo)</button>
+                <button type="button" onclick="setMLThreshold(55)" data-thresh="55" class="btn btn-secondary btn-thresh-preset" style="padding: 0.3rem 0.5rem; font-size: 0.78rem;">55%</button>
+                <button type="button" onclick="setMLThreshold(60)" data-thresh="60" class="btn btn-secondary btn-thresh-preset" style="padding: 0.3rem 0.5rem; font-size: 0.78rem;">60%</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-title">
+        <span>Reglas de Entrada (Compra)</span>
+        <button id="add-rule-btn" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+            <i class="fa-solid fa-plus"></i> Añadir Regla
+        </button>
+    </div>
+    
+    <div style="margin-top: 1rem; color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">
+        Todas las condiciones añadidas se evaluarán mediante un conector lógico <strong>AND</strong> (deben cumplirse todas simultáneamente para ejecutar la compra).
+    </div>
+
+    <form id="strategy-form" method="POST">
+        <div id="save-status-banner" style="display: none; margin-bottom: 1.5rem;"></div>
+        <div id="rules-container">
+            <!-- Las reglas se renderizarán dinámicamente con JavaScript -->
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem;">
+            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-primary">
+                <i class="fa-solid fa-floppy-disk"></i> Guardar Estrategia de Entrada
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const variables = [
+        { value: 'close', label: 'Precio Actual' },
+        { value: 'ema9', label: 'EMA 9' },
+        { value: 'ema21', label: 'EMA 21' },
+        { value: 'ema35', label: 'EMA 35' },
+        { value: 'ema50', label: 'EMA 50' },
+        { value: 'ema100', label: 'EMA 100' },
+        { value: 'ema200', label: 'EMA 200' },
+        { value: 'ema9_slope', label: 'Pendiente Absoluta EMA 9' },
+        { value: 'ema21_slope', label: 'Pendiente Absoluta EMA 21' },
+        { value: 'ema35_slope', label: 'Pendiente Absoluta EMA 35' },
+        { value: 'ema50_slope', label: 'Pendiente Absoluta EMA 50' },
+        { value: 'ema100_slope', label: 'Pendiente Absoluta EMA 100' },
+        { value: 'ema200_slope', label: 'Pendiente Absoluta EMA 200' },
+        { value: 'ema9_slope_pct', label: 'Pendiente % EMA 9' },
+        { value: 'ema21_slope_pct', label: 'Pendiente % EMA 21' },
+        { value: 'ema35_slope_pct', label: 'Pendiente % EMA 35' },
+        { value: 'ema50_slope_pct', label: 'Pendiente % EMA 50' },
+        { value: 'ema100_slope_pct', label: 'Pendiente % EMA 100' },
+        { value: 'ema200_slope_pct', label: 'Pendiente % EMA 200' },
+        { value: 'rsi14', label: 'RSI (14)' },
+        { value: 'macd', label: 'MACD Line' },
+        { value: 'macd_signal', label: 'MACD Signal' },
+        { value: 'macd_hist', label: 'MACD Histograma' },
+        { value: 'atr14', label: 'ATR (14)' }
+    ];
+
+    const operators = [
+        { value: 'gt', label: 'Mayor que (>)' },
+        { value: 'lt', label: 'Menor que (<)' },
+        { value: 'gte', label: 'Mayor o igual que (>=)' },
+        { value: 'lte', label: 'Menor o igual que (<=)' },
+        { value: 'cross_above', label: 'Cruza por encima de' },
+        { value: 'cross_below', label: 'Cruza por debajo de' }
+    ];
+
+    // Cargar reglas existentes desde el backend
+    let currentRules = {{ rules|tojson }};
+
+    function createRuleRow(rule = {}) {
+        const container = document.getElementById('rules-container');
+        const rowId = 'rule-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4);
+
+        const var1 = rule.var1 || rule.ind1 || 'close';
+        const op = rule.op === '>' ? 'gt' : (rule.op === '<' ? 'lt' : (rule.op || 'gt'));
+        const rawComp = rule.compare_type || rule.val_type;
+        const compareType = (rawComp === 'value' || rawComp === 'number') ? 'value' : 'indicator';
+        const var2 = rule.var2 || (compareType === 'indicator' ? rule.val : 'ema9') || 'ema9';
+        const val2 = rule.val2 !== undefined ? rule.val2 : (compareType === 'value' ? (rule.val || 0) : 0);
+
+        const rowHTML = `
+            <div id="${rowId}" class="rule-row">
+                <div class="form-group" style="flex: 2; margin-bottom: 0;">
+                    <label class="form-label">Variable 1</label>
+                    <select name="var1" class="var1-select">
+                        ${variables.map(v => `<option value="${v.value}" ${v.value === var1 ? 'selected' : ''}>${v.label}</option>`).join('')}
+                    </select>
+                </div>
+
+                <div class="form-group" style="flex: 1.5; margin-bottom: 0;">
+                    <label class="form-label">Operador</label>
+                    <select name="op" class="op-select">
+                        ${operators.map(o => `<option value="${o.value}" ${o.value === op ? 'selected' : ''}>${o.label}</option>`).join('')}
+                    </select>
+                </div>
+
+                <div class="form-group" style="flex: 1.2; margin-bottom: 0;">
+                    <label class="form-label">Comparar con</label>
+                    <select name="compare_type" class="compare-type-select">
+                        <option value="indicator" ${compareType === 'indicator' ? 'selected' : ''}>Indicador</option>
+                        <option value="value" ${compareType === 'value' ? 'selected' : ''}>Valor Fijo</option>
+                    </select>
+                </div>
+
+                <div class="form-group var2-group" style="flex: 2; margin-bottom: 0; display: ${compareType === 'indicator' ? 'block' : 'none'};">
+                    <label class="form-label">Variable 2</label>
+                    <select name="var2" class="var2-select">
+                        ${variables.map(v => `<option value="${v.value}" ${v.value === var2 ? 'selected' : ''}>${v.label}</option>`).join('')}
+                    </select>
+                </div>
+
+                <div class="form-group val2-group" style="flex: 2; margin-bottom: 0; display: ${compareType === 'value' ? 'block' : 'none'};">
+                    <label class="form-label">Valor Constante</label>
+                    <input type="number" step="any" name="val2" class="form-control val2-input" value="${val2}">
+                </div>
+
+                <button type="button" class="btn btn-danger remove-rule-btn" style="padding: 0.75rem; margin-top: 1.4rem;">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </div>
+        `;
+
+        container.insertAdjacentHTML('beforeend', rowHTML);
+
+        const newRow = document.getElementById(rowId);
+        
+        // Listener para cambiar entre indicador y valor fijo
+        newRow.querySelector('.compare-type-select').addEventListener('change', function() {
+            const var2Group = newRow.querySelector('.var2-group');
+            const val2Group = newRow.querySelector('.val2-group');
+            if (this.value === 'indicator') {
+                var2Group.style.display = 'block';
+                val2Group.style.display = 'none';
+            } else {
+                var2Group.style.display = 'none';
+                val2Group.style.display = 'block';
+            }
+        });
+
+        // Listener para eliminar fila
+        newRow.querySelector('.remove-rule-btn').addEventListener('click', function() {
+            newRow.remove();
+        });
+    }
+
+    // Inicializar con reglas existentes o una fila vacía
+    if (currentRules.length > 0) {
+        currentRules.forEach(rule => createRuleRow(rule));
+    } else {
+        createRuleRow();
+    }
+
+    document.getElementById('add-rule-btn').addEventListener('click', () => createRuleRow());
+
+    // Enviar el formulario vía JSON
+    document.getElementById('strategy-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        const banner = document.getElementById('save-status-banner');
+
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando y Re-entrenando ML...';
+
+        const rows = document.querySelectorAll('.rule-row');
+        const rules = [];
+
+        rows.forEach(row => {
+            const var1 = row.querySelector('.var1-select').value;
+            const op = row.querySelector('.op-select').value;
+            const compareType = row.querySelector('.compare-type-select').value;
+            const var2 = row.querySelector('.var2-select').value;
+            const val2 = parseFloat(row.querySelector('.val2-input').value) || 0;
+
+            rules.push({
+                var1,
+                op,
+                compare_type: compareType,
+                var2,
+                val2
+            });
+        });
+
+        try {
+            const response = await fetch("{{ url_for('save_strategy_api', strategy_type='entry') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ rules })
+            });
+            const result = await response.json();
+            if (result.success) {
+                banner.style.display = 'block';
+                banner.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.95rem; padding: 1rem 1.25rem; border: 1px solid #10b981; background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border-radius: 8px; font-weight: bold;">
+                        <i class="fa-solid fa-circle-check" style="font-size: 1.4rem; color: #10b981;"></i>
+                        <span>¡Estrategia de Entrada guardada exitosamente! El modelo de Machine Learning se ha actualizado. Redirigiendo al Dashboard...</span>
+                    </div>`;
+                banner.scrollIntoView({ behavior: 'smooth' });
+                setTimeout(() => {
+                    window.location.href = "{{ url_for('dashboard') }}";
+                }, 1500);
+            } else {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Guardar Estrategia de Entrada';
+                banner.style.display = 'block';
+                banner.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.95rem; padding: 1rem 1.25rem; border: 1px solid #ef4444; background: rgba(239, 68, 68, 0.2); color: #fca5a5; border-radius: 8px; font-weight: bold;">
+                        <i class="fa-solid fa-circle-exclamation" style="font-size: 1.4rem; color: #ef4444;"></i>
+                        <span>Error al guardar la estrategia: ${result.message}</span>
+                    </div>`;
+            }
+        } catch (error) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Guardar Estrategia de Entrada';
+            banner.style.display = 'block';
+            banner.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.95rem; padding: 1rem 1.25rem; border: 1px solid #ef4444; background: rgba(239, 68, 68, 0.2); color: #fca5a5; border-radius: 8px; font-weight: bold;">
+                    <i class="fa-solid fa-triangle-exclamation" style="font-size: 1.4rem; color: #ef4444;"></i>
+                    <span>Error de red al guardar la estrategia.</span>
+                </div>`;
+        }
+    });
+
+    function highlightEntrySize() {
+        const inputElem = document.getElementById('entry-trade-size-input');
+        if (!inputElem) return;
+        const currentVal = parseFloat(inputElem.value) || 0;
+        const fullBal = parseFloat('{{ settings.simulation_balance }}') || 10000;
+        const buttons = document.querySelectorAll('.btn-size-preset');
+
+        buttons.forEach(btn => {
+            const attrVal = btn.getAttribute('data-size');
+            let isMatch = false;
+            if (attrVal === 'full' && Math.abs(currentVal - fullBal) < 0.01) {
+                isMatch = true;
+            } else if (parseFloat(attrVal) === currentVal) {
+                isMatch = true;
+            }
+
+            if (isMatch) {
+                btn.style.background = 'rgba(168, 85, 247, 0.3)';
+                btn.style.borderColor = '#a855f7';
+                btn.style.color = '#e9d5ff';
+                btn.style.fontWeight = 'bold';
+            } else {
+                btn.style.background = 'var(--surface-color-light, #2a2e3d)';
+                btn.style.borderColor = 'var(--border-color, rgba(255, 255, 255, 0.1))';
+                btn.style.color = '#cbd5e1';
+                btn.style.fontWeight = 'normal';
+            }
+        });
+    }
+
+    async function setEntrySize(val) {
+        const input = document.getElementById('entry-trade-size-input');
+        if (val === 'full') {
+            const fullBal = parseFloat('{{ settings.simulation_balance }}') || 10000;
+            input.value = fullBal;
+        } else {
+            input.value = val;
+        }
+        highlightEntrySize();
+        await saveTradeSize(parseFloat(input.value));
+    }
+
+    async function saveTradeSize(amount) {
+        if (!amount || amount <= 0) return;
+        try {
+            await fetch('/api/settings/trade-size', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ trade_size_usd: amount })
+            });
+        } catch (e) {
+            console.error("Error al guardar monto por entrada:", e);
+        }
+    }
+
+    document.getElementById('entry-trade-size-input').addEventListener('input', () => {
+        highlightEntrySize();
+    });
+    document.getElementById('entry-trade-size-input').addEventListener('change', (e) => {
+        highlightEntrySize();
+        saveTradeSize(parseFloat(e.target.value));
+    });
+
+    // Ejecutar resaltado inicial
+    highlightEntrySize();
+
+    function highlightMLThreshold() {
+        const inputElem = document.getElementById('ml-threshold-input');
+        if (!inputElem) return;
+        const currentVal = parseFloat(inputElem.value) || 50;
+        const buttons = document.querySelectorAll('.btn-thresh-preset');
+
+        buttons.forEach(btn => {
+            const attrVal = parseFloat(btn.getAttribute('data-thresh'));
+            if (Math.abs(attrVal - currentVal) < 0.1) {
+                btn.style.background = 'rgba(168, 85, 247, 0.35)';
+                btn.style.borderColor = '#a855f7';
+                btn.style.color = '#e9d5ff';
+                btn.style.fontWeight = 'bold';
+            } else {
+                btn.style.background = 'var(--surface-color-light, #2a2e3d)';
+                btn.style.borderColor = 'var(--border-color, rgba(255, 255, 255, 0.1))';
+                btn.style.color = '#cbd5e1';
+                btn.style.fontWeight = 'normal';
+            }
+        });
+    }
+
+    async function setMLThreshold(val) {
+        const input = document.getElementById('ml-threshold-input');
+        input.value = val;
+        highlightMLThreshold();
+        await saveMLThreshold(parseFloat(val));
+    }
+
+    async function saveMLThreshold(amount) {
+        if (!amount || amount <= 0) return;
+        const banner = document.getElementById('save-status-banner');
+        try {
+            const res = await fetch('/api/settings/ml-threshold', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ml_threshold_pct: amount })
+            });
+            const data = await res.json();
+            if (data.success && banner) {
+                banner.style.display = 'block';
+                banner.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.95rem; padding: 0.85rem 1.1rem; border: 1px solid #a855f7; background: rgba(168, 85, 247, 0.2); color: #e9d5ff; border-radius: 8px; font-weight: bold;">
+                        <i class="fa-solid fa-brain" style="font-size: 1.3rem; color: #a855f7;"></i>
+                        <span>Umbral de Confianza ML guardado a ${amount}% y simulación actualizada.</span>
+                    </div>`;
+                banner.scrollIntoView({ behavior: 'smooth' });
+            }
+        } catch (e) {
+            console.error("Error guardando umbral ML:", e);
+        }
+    }
+
+    document.getElementById('ml-threshold-input').addEventListener('input', () => {
+        highlightMLThreshold();
+    });
+    document.getElementById('ml-threshold-input').addEventListener('change', (e) => {
+        highlightMLThreshold();
+        saveMLThreshold(parseFloat(e.target.value));
+    });
+
+    highlightMLThreshold();
+
+    // Re-entrenamiento manual del modelo ML
+    document.getElementById('btn-manual-retrain-ml').addEventListener('click', async function() {
+        const banner = document.getElementById('save-status-banner');
+        this.disabled = true;
+        this.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Re-entrenando Modelo ML...';
+
+        try {
+            const res = await fetch('/api/ml/retrain', { method: 'POST' });
+            const data = await res.json();
+            banner.style.display = 'block';
+            if (data.success) {
+                banner.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.95rem; padding: 1rem 1.25rem; border: 1px solid #a855f7; background: rgba(168, 85, 247, 0.2); color: #e9d5ff; border-radius: 8px; font-weight: bold;">
+                        <i class="fa-solid fa-brain" style="font-size: 1.4rem; color: #a855f7;"></i>
+                        <span>${data.message}</span>
+                    </div>`;
+            } else {
+                banner.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.95rem; padding: 1rem 1.25rem; border: 1px solid #ef4444; background: rgba(239, 68, 68, 0.2); color: #fca5a5; border-radius: 8px; font-weight: bold;">
+                        <i class="fa-solid fa-circle-exclamation" style="font-size: 1.4rem; color: #ef4444;"></i>
+                        <span>Fallo al re-entrenar: ${data.message}</span>
+                    </div>`;
+            }
+            banner.scrollIntoView({ behavior: 'smooth' });
+        } catch (e) {
+            banner.style.display = 'block';
+            banner.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.95rem; padding: 1rem 1.25rem; border: 1px solid #ef4444; background: rgba(239, 68, 68, 0.2); color: #fca5a5; border-radius: 8px; font-weight: bold;">
+                    <i class="fa-solid fa-triangle-exclamation" style="font-size: 1.4rem; color: #ef4444;"></i>
+                    <span>Error de red al intentar re-entrenar el modelo ML.</span>
+                </div>`;
+        } finally {
+            this.disabled = false;
+            this.innerHTML = '<i class="fa-solid fa-brain" style="color: #a855f7;"></i> Re-entrenar Modelo ML Manualmente';
+        }
+    });
+</script>
+{% endblock %}

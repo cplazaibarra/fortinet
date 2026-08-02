@@ -1,0 +1,240 @@
+{% extends 'base.html' %}
+
+{% block title %}Estrategia de Salida | FORTINET TRADING BOT{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Estrategia de Salida</h1>
+    <p class="page-description">Define las condiciones requeridas para vender FTNT y cerrar el trade.</p>
+</div>
+
+<div class="card">
+    <div class="card-title">
+        <span>Reglas de Salida (Venta)</span>
+        <button id="add-rule-btn" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+            <i class="fa-solid fa-plus"></i> Añadir Regla
+        </button>
+    </div>
+    
+    <div style="margin-top: 1rem; color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">
+        Las condiciones añadidas se evaluarán mediante un conector lógico <strong>OR</strong> (se ejecutará la venta si se cumple cualquiera de ellas, por ejemplo, stop loss o cruce de medias).
+    </div>
+
+    <form id="strategy-form" method="POST">
+        <div id="save-status-banner" style="display: none; margin-bottom: 1.5rem;"></div>
+        <div id="rules-container">
+            <!-- Las reglas se renderizarán dinámicamente con JavaScript -->
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem;">
+            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-primary">
+                <i class="fa-solid fa-floppy-disk"></i> Guardar Estrategia de Salida
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const variables = [
+        { value: 'close', label: 'Precio Actual' },
+        { value: 'tp_pct', label: '% Ganancia Objetivo (Take Profit)' },
+        { value: 'pnl_pct', label: '% PnL de la Operación Actual' },
+        { value: 'trailing_drop_pct', label: '% Caída desde el Máximo de la Posición (Trailing Stop)' },
+        { value: 'ema9', label: 'EMA 9' },
+        { value: 'ema21', label: 'EMA 21' },
+        { value: 'ema35', label: 'EMA 35' },
+        { value: 'ema50', label: 'EMA 50' },
+        { value: 'ema100', label: 'EMA 100' },
+        { value: 'ema200', label: 'EMA 200' },
+        { value: 'ema9_slope', label: 'Pendiente Absoluta EMA 9' },
+        { value: 'ema21_slope', label: 'Pendiente Absoluta EMA 21' },
+        { value: 'ema35_slope', label: 'Pendiente Absoluta EMA 35' },
+        { value: 'ema50_slope', label: 'Pendiente Absoluta EMA 50' },
+        { value: 'ema100_slope', label: 'Pendiente Absoluta EMA 100' },
+        { value: 'ema200_slope', label: 'Pendiente Absoluta EMA 200' },
+        { value: 'ema9_slope_pct', label: 'Pendiente % EMA 9' },
+        { value: 'ema21_slope_pct', label: 'Pendiente % EMA 21' },
+        { value: 'ema35_slope_pct', label: 'Pendiente % EMA 35' },
+        { value: 'ema50_slope_pct', label: 'Pendiente % EMA 50' },
+        { value: 'ema100_slope_pct', label: 'Pendiente % EMA 100' },
+        { value: 'ema200_slope_pct', label: 'Pendiente % EMA 200' },
+        { value: 'rsi14', label: 'RSI (14)' },
+        { value: 'macd', label: 'MACD Line' },
+        { value: 'macd_signal', label: 'MACD Signal' },
+        { value: 'macd_hist', label: 'MACD Histograma' },
+        { value: 'atr14', label: 'ATR (14)' },
+        { value: 'buy_price', label: 'Precio de Compra de Entrada' }
+    ];
+
+    const operators = [
+        { value: 'gt', label: 'Mayor que (>)' },
+        { value: 'lt', label: 'Menor que (<)' },
+        { value: 'gte', label: 'Mayor o igual que (>=)' },
+        { value: 'lte', label: 'Menor o igual que (<=)' },
+        { value: 'cross_above', label: 'Cruza por encima de' },
+        { value: 'cross_below', label: 'Cruza por debajo de' }
+    ];
+
+    // Cargar reglas existentes desde el backend
+    let currentRules = {{ rules|tojson }};
+
+    function createRuleRow(rule = {}) {
+        const container = document.getElementById('rules-container');
+        const rowId = 'rule-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4);
+
+        const var1 = rule.var1 || rule.ind1 || 'close';
+        const op = rule.op === '>' ? 'gt' : (rule.op === '<' ? 'lt' : (rule.op || 'gt'));
+        const rawComp = rule.compare_type || rule.val_type;
+        const compareType = (rawComp === 'value' || rawComp === 'number') ? 'value' : 'indicator';
+        const var2 = rule.var2 || (compareType === 'indicator' ? rule.val : 'ema9') || 'ema9';
+        const val2 = rule.val2 !== undefined ? rule.val2 : (compareType === 'value' ? (rule.val || 0) : 0);
+
+        const rowHTML = `
+            <div id="${rowId}" class="rule-row">
+                <div class="form-group" style="flex: 2; margin-bottom: 0;">
+                    <label class="form-label">Variable 1</label>
+                    <select name="var1" class="var1-select">
+                        ${variables.map(v => `<option value="${v.value}" ${v.value === var1 ? 'selected' : ''}>${v.label}</option>`).join('')}
+                    </select>
+                </div>
+
+                <div class="form-group" style="flex: 1.5; margin-bottom: 0;">
+                    <label class="form-label">Operador</label>
+                    <select name="op" class="op-select">
+                        ${operators.map(o => `<option value="${o.value}" ${o.value === op ? 'selected' : ''}>${o.label}</option>`).join('')}
+                    </select>
+                </div>
+
+                <div class="form-group" style="flex: 1.2; margin-bottom: 0;">
+                    <label class="form-label">Comparar con</label>
+                    <select name="compare_type" class="compare-type-select">
+                        <option value="indicator" ${compareType === 'indicator' ? 'selected' : ''}>Indicador</option>
+                        <option value="value" ${compareType === 'value' ? 'selected' : ''}>Valor Fijo</option>
+                    </select>
+                </div>
+
+                <div class="form-group var2-group" style="flex: 2; margin-bottom: 0; display: ${compareType === 'indicator' ? 'block' : 'none'};">
+                    <label class="form-label">Variable 2</label>
+                    <select name="var2" class="var2-select">
+                        ${variables.map(v => `<option value="${v.value}" ${v.value === var2 ? 'selected' : ''}>${v.label}</option>`).join('')}
+                    </select>
+                </div>
+
+                <div class="form-group val2-group" style="flex: 2; margin-bottom: 0; display: ${compareType === 'value' ? 'block' : 'none'};">
+                    <label class="form-label">Valor Constante</label>
+                    <input type="number" step="any" name="val2" class="form-control val2-input" value="${val2}">
+                </div>
+
+                <button type="button" class="btn btn-danger remove-rule-btn" style="padding: 0.75rem; margin-top: 1.4rem;">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </div>
+        `;
+
+        container.insertAdjacentHTML('beforeend', rowHTML);
+
+        const newRow = document.getElementById(rowId);
+        
+        // Listener para cambiar entre indicador y valor fijo
+        newRow.querySelector('.compare-type-select').addEventListener('change', function() {
+            const var2Group = newRow.querySelector('.var2-group');
+            const val2Group = newRow.querySelector('.val2-group');
+            if (this.value === 'indicator') {
+                var2Group.style.display = 'block';
+                val2Group.style.display = 'none';
+            } else {
+                var2Group.style.display = 'none';
+                val2Group.style.display = 'block';
+            }
+        });
+
+        // Listener para eliminar fila
+        newRow.querySelector('.remove-rule-btn').addEventListener('click', function() {
+            newRow.remove();
+        });
+    }
+
+    // Inicializar con reglas existentes o una fila vacía
+    if (currentRules.length > 0) {
+        currentRules.forEach(rule => createRuleRow(rule));
+    } else {
+        createRuleRow();
+    }
+
+    document.getElementById('add-rule-btn').addEventListener('click', () => createRuleRow());
+
+    // Enviar el formulario vía JSON
+    document.getElementById('strategy-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        const banner = document.getElementById('save-status-banner');
+
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando Estrategia...';
+
+        const rows = document.querySelectorAll('.rule-row');
+        const rules = [];
+
+        rows.forEach(row => {
+            const var1 = row.querySelector('.var1-select').value;
+            const op = row.querySelector('.op-select').value;
+            const compareType = row.querySelector('.compare-type-select').value;
+            const var2 = row.querySelector('.var2-select').value;
+            const val2 = parseFloat(row.querySelector('.val2-input').value) || 0;
+
+            rules.push({
+                var1,
+                op,
+                compare_type: compareType,
+                var2,
+                val2
+            });
+        });
+
+        try {
+            const response = await fetch("{{ url_for('save_strategy_api', strategy_type='exit') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ rules, profile: 1 })
+            });
+            const result = await response.json();
+            if (result.success) {
+                banner.style.display = 'block';
+                banner.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.95rem; padding: 1rem 1.25rem; border: 1px solid #10b981; background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border-radius: 8px; font-weight: bold;">
+                        <i class="fa-solid fa-circle-check" style="font-size: 1.4rem; color: #10b981;"></i>
+                        <span>¡Estrategia de Salida guardada exitosamente! Redirigiendo al Dashboard...</span>
+                    </div>`;
+                banner.scrollIntoView({ behavior: 'smooth' });
+                setTimeout(() => {
+                    window.location.href = "{{ url_for('dashboard') }}";
+                }, 1500);
+            } else {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Guardar Estrategia de Salida';
+                banner.style.display = 'block';
+                banner.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.95rem; padding: 1rem 1.25rem; border: 1px solid #ef4444; background: rgba(239, 68, 68, 0.2); color: #fca5a5; border-radius: 8px; font-weight: bold;">
+                        <i class="fa-solid fa-circle-exclamation" style="font-size: 1.4rem; color: #ef4444;"></i>
+                        <span>Error al guardar la estrategia: ${result.message}</span>
+                    </div>`;
+            }
+        } catch (error) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Guardar Estrategia de Salida';
+            banner.style.display = 'block';
+            banner.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.95rem; padding: 1rem 1.25rem; border: 1px solid #ef4444; background: rgba(239, 68, 68, 0.2); color: #fca5a5; border-radius: 8px; font-weight: bold;">
+                    <i class="fa-solid fa-triangle-exclamation" style="font-size: 1.4rem; color: #ef4444;"></i>
+                    <span>Error de red al guardar la estrategia.</span>
+                </div>`;
+        }
+    });
+</script>
+{% endblock %}
