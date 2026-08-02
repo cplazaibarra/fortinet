@@ -177,10 +177,8 @@ def evaluate_rules(klines, rules, is_exit=False):
             return True, "Disparador 1: Cruce Inicial MACD + RSI > 45"
         elif trig2:
             return True, "Disparador 2: Re-Entrada por Impulso en Tendencia (MACD > Signal + EMA9 > EMA21 + RSI Cruza 50)"
-            
-        passed = all(results) and len(results) > 0
-        reason = f"Reglas de Entrada [{', '.join(matched_descriptions)}]" if passed else "No se cumplen las reglas de entrada"
-        return passed, reason
+        else:
+            return False, "No se cumplen las reglas de entrada (Cruce Inicial o Re-Entrada en Tendencia)"
 
 def get_open_position(min_usdt_threshold=2.0):
     """Busca si hay una operación de compra abierta (que no tenga venta asociada).
