@@ -117,17 +117,37 @@
 
     <form id="strategy-form" method="POST">
         <div id="save-status-banner" style="display: none; margin-bottom: 1.5rem;"></div>
-        <div style="font-weight: bold; color: #cbd5e1; margin-bottom: 0.75rem; font-size: 0.9rem;">
-            Reglas de Entrada Editables en Base de Datos:
+
+        <!-- SECCIÓN DE FORMULARIO RAMA 1 -->
+        <div style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 10px; padding: 1.25rem; margin-bottom: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid rgba(56, 189, 248, 0.2); padding-bottom: 0.5rem;">
+                <div style="font-weight: bold; color: #38bdf8; font-size: 1rem;">
+                    <i class="fa-solid fa-rocket"></i> RAMA 1: Reglas de Entrada por Cruce Inicial
+                </div>
+                <span class="badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid #38bdf8;">Disparador 1</span>
+            </div>
+            <div id="rama1-rules-container">
+                <!-- Reglas de la Rama 1 -->
+            </div>
         </div>
-        <div id="rules-container">
-            <!-- Las reglas se renderizarán dinámicamente con JavaScript -->
+
+        <!-- SECCIÓN DE FORMULARIO RAMA 2 -->
+        <div style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 10px; padding: 1.25rem; margin-bottom: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid rgba(245, 158, 11, 0.2); padding-bottom: 0.5rem;">
+                <div style="font-weight: bold; color: #f59e0b; font-size: 1rem;">
+                    <i class="fa-solid fa-rotate-right"></i> RAMA 2: Reglas de Re-Entrada por Impulso en Tendencia
+                </div>
+                <span class="badge" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid #f59e0b;">Disparador 2</span>
+            </div>
+            <div id="rama2-rules-container">
+                <!-- Reglas de la Rama 2 -->
+            </div>
         </div>
 
         <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem;">
             <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Cancelar</a>
             <button type="submit" class="btn btn-primary">
-                <i class="fa-solid fa-floppy-disk"></i> Guardar Estrategia de Entrada
+                <i class="fa-solid fa-floppy-disk"></i> Guardar Estrategia de Entrada (RAMA 1 y 2)
             </button>
         </div>
     </form>
@@ -175,8 +195,9 @@
     // Cargar reglas existentes desde el backend
     let currentRules = {{ rules|tojson }};
 
-    function createRuleRow(rule = {}) {
-        const container = document.getElementById('rules-container');
+    function createRuleRow(rule = {}, containerId = 'rama1-rules-container') {
+        const container = document.getElementById(containerId);
+        if (!container) return;
         const rowId = 'rule-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4);
 
         const var1 = rule.var1 || rule.ind1 || 'close';
@@ -187,23 +208,23 @@
         const val2 = rule.val2 !== undefined ? rule.val2 : (compareType === 'value' ? (rule.val || 0) : 0);
 
         const rowHTML = `
-            <div id="${rowId}" class="rule-row">
+            <div id="${rowId}" class="rule-row" data-container="${containerId}" style="display: flex; gap: 0.75rem; align-items: center; margin-bottom: 0.75rem; background: rgba(15, 23, 42, 0.6); padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06);">
                 <div class="form-group" style="flex: 2; margin-bottom: 0;">
-                    <label class="form-label">Variable 1</label>
+                    <label class="form-label" style="font-size: 0.78rem; color: var(--text-muted);">Variable 1</label>
                     <select name="var1" class="var1-select">
                         ${variables.map(v => `<option value="${v.value}" ${v.value === var1 ? 'selected' : ''}>${v.label}</option>`).join('')}
                     </select>
                 </div>
 
                 <div class="form-group" style="flex: 1.5; margin-bottom: 0;">
-                    <label class="form-label">Operador</label>
+                    <label class="form-label" style="font-size: 0.78rem; color: var(--text-muted);">Operador</label>
                     <select name="op" class="op-select">
                         ${operators.map(o => `<option value="${o.value}" ${o.value === op ? 'selected' : ''}>${o.label}</option>`).join('')}
                     </select>
                 </div>
 
                 <div class="form-group" style="flex: 1.2; margin-bottom: 0;">
-                    <label class="form-label">Comparar con</label>
+                    <label class="form-label" style="font-size: 0.78rem; color: var(--text-muted);">Comparar con</label>
                     <select name="compare_type" class="compare-type-select">
                         <option value="indicator" ${compareType === 'indicator' ? 'selected' : ''}>Indicador</option>
                         <option value="value" ${compareType === 'value' ? 'selected' : ''}>Valor Fijo</option>
@@ -211,18 +232,18 @@
                 </div>
 
                 <div class="form-group var2-group" style="flex: 2; margin-bottom: 0; display: ${compareType === 'indicator' ? 'block' : 'none'};">
-                    <label class="form-label">Variable 2</label>
+                    <label class="form-label" style="font-size: 0.78rem; color: var(--text-muted);">Variable 2</label>
                     <select name="var2" class="var2-select">
                         ${variables.map(v => `<option value="${v.value}" ${v.value === var2 ? 'selected' : ''}>${v.label}</option>`).join('')}
                     </select>
                 </div>
 
                 <div class="form-group val2-group" style="flex: 2; margin-bottom: 0; display: ${compareType === 'value' ? 'block' : 'none'};">
-                    <label class="form-label">Valor Constante</label>
+                    <label class="form-label" style="font-size: 0.78rem; color: var(--text-muted);">Valor Constante</label>
                     <input type="number" step="any" name="val2" class="form-control val2-input" value="${val2}">
                 </div>
 
-                <button type="button" class="btn btn-danger remove-rule-btn" style="padding: 0.75rem; margin-top: 1.4rem;">
+                <button type="button" class="btn btn-danger remove-rule-btn" style="padding: 0.55rem 0.75rem; margin-top: 1.2rem;">
                     <i class="fa-solid fa-trash"></i>
                 </button>
             </div>
@@ -232,7 +253,6 @@
 
         const newRow = document.getElementById(rowId);
         
-        // Listener para cambiar entre indicador y valor fijo
         newRow.querySelector('.compare-type-select').addEventListener('change', function() {
             const var2Group = newRow.querySelector('.var2-group');
             const val2Group = newRow.querySelector('.val2-group');
@@ -245,18 +265,25 @@
             }
         });
 
-        // Listener para eliminar fila
         newRow.querySelector('.remove-rule-btn').addEventListener('click', function() {
             newRow.remove();
         });
     }
 
-    // Inicializar con reglas existentes o una fila vacía
-    if (currentRules.length > 0) {
-        currentRules.forEach(rule => createRuleRow(rule));
-    } else {
-        createRuleRow();
-    }
+    // Inicializar explícitamente RAMA 1 y RAMA 2
+    const defaultRama1 = [
+        { var1: 'macd', op: 'cross_above', compare_type: 'indicator', var2: 'macd_signal' },
+        { var1: 'rsi14', op: 'gt', compare_type: 'value', val2: 45.0 }
+    ];
+
+    const defaultRama2 = [
+        { var1: 'macd', op: 'gt', compare_type: 'indicator', var2: 'macd_signal' },
+        { var1: 'ema9', op: 'gt', compare_type: 'indicator', var2: 'ema21' },
+        { var1: 'rsi14', op: 'cross_above', compare_type: 'value', val2: 50.0 }
+    ];
+
+    defaultRama1.forEach(rule => createRuleRow(rule, 'rama1-rules-container'));
+    defaultRama2.forEach(rule => createRuleRow(rule, 'rama2-rules-container'));
 
     document.getElementById('add-rule-btn').addEventListener('click', () => createRuleRow());
 
