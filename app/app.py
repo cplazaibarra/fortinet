@@ -155,7 +155,29 @@ def evaluate_rules(klines, rules, is_exit=False):
         reason = f"Regla de Salida [{', '.join(matched_descriptions)}]" if passed else "Sin activación de salida"
         return passed, reason
     else:
-        # Estrategia de Entrada: AND (se deben cumplir todas)
+        # Estrategia de Entrada: Doble Disparador (Cruce Inicial OR Re-Entrada en Tendencia)
+        c0 = klines[-1]
+        c1 = klines[-2]
+        macd_c0 = get_variable_value(c0, 'macd', klines=klines) or 0
+        sig_c0 = get_variable_value(c0, 'macd_signal', klines=klines) or 0
+        macd_c1 = get_variable_value(c1, 'macd', klines=klines[:-1]) or 0
+        sig_c1 = get_variable_value(c1, 'macd_signal', klines=klines[:-1]) or 0
+        rsi_c0 = get_variable_value(c0, 'rsi14', klines=klines) or 50
+        rsi_c1 = get_variable_value(c1, 'rsi14', klines=klines[:-1]) or 50
+        ema9_c0 = get_variable_value(c0, 'ema9', klines=klines) or 0
+        ema21_c0 = get_variable_value(c0, 'ema21', klines=klines) or 0
+
+        # Disparador 1: Cruce Inicial MACD Line por encima de Signal + RSI > 45
+        trig1 = (macd_c1 <= sig_c1) and (macd_c0 > sig_c0) and (rsi_c0 > 45.0)
+
+        # Disparador 2: Re-Entrada en Tendencia Alcista (MACD > Signal + EMA9 > EMA21 + RSI Cruza por encima de 45)
+        trig2 = (macd_c0 > sig_c0) and (ema9_c0 > ema21_c0) and (rsi_c1 <= 45.0) and (rsi_c0 > 45.0)
+
+        if trig1:
+            return True, "Disparador 1: Cruce Inicial MACD + RSI > 45"
+        elif trig2:
+            return True, "Disparador 2: Re-Entrada por Impulso en Tendencia (MACD > Signal + EMA9 > EMA21 + RSI Cruza 45)"
+            
         passed = all(results) and len(results) > 0
         reason = f"Reglas de Entrada [{', '.join(matched_descriptions)}]" if passed else "No se cumplen las reglas de entrada"
         return passed, reason
