@@ -1,7 +1,11 @@
 version: '3.8'
 
+networks:
+  apps-net:
+    external: true
+
 services:
-  postgres:
+  fortinet-db:
     image: postgres:15-alpine
     container_name: fortinet-postgres
     restart: always
@@ -10,18 +14,20 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - fortinet_postgres_data:/var/lib/postgresql/data
+    networks:
+      - apps-net
 
-  app:
+  fortinet-app:
     build: .
     container_name: fortinet-app
     restart: always
     depends_on:
-      - postgres
+      - fortinet-db
     environment:
-      - DB_HOST=postgres
+      - DB_HOST=fortinet-postgres
       - DB_PORT=5432
       - DB_NAME=fortinet_db
       - DB_USER=postgres
@@ -29,17 +35,8 @@ services:
       - PYTHONPATH=/app
     ports:
       - "5050:5050"
-
-  nginx:
-    image: nginx:alpine
-    container_name: fortinet-nginx
-    restart: always
-    depends_on:
-      - app
-    ports:
-      - "80:80"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - apps-net
 
 volumes:
-  postgres_data:
+  fortinet_postgres_data:
