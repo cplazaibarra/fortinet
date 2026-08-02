@@ -32,6 +32,11 @@ services:
       - DB_NAME=fortinet_db
       - DB_USER=postgres
       - DB_PASSWORD=postgres
+      - POSTGRES_HOST=fortinet-postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=fortinet_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
       - PYTHONPATH=/app
     ports:
       - "5050:5050"
