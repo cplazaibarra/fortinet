@@ -39,7 +39,7 @@ services:
       - POSTGRES_PASSWORD=postgres
       - PYTHONPATH=/app
     ports:
-      - "5050:5050"
+      - "4444:5050"
     networks:
       - apps-net
 
