@@ -114,25 +114,11 @@
         </div>
     </div>
 
-    <!-- Tabla Checklist de Condiciones -->
-    <div style="overflow-x: auto;">
-        <table style="width: 100%; border-collapse: collapse; font-size: 0.88rem;">
-            <thead>
-                <tr style="background: rgba(15, 23, 42, 0.6); color: var(--text-muted); border-bottom: 1px solid rgba(255,255,255,0.08);">
-                    <th style="padding: 0.65rem 0.8rem; text-align: left;">Parámetro / Regla Técnica</th>
-                    <th style="padding: 0.65rem 0.8rem; text-align: center;">Operador</th>
-                    <th style="padding: 0.65rem 0.8rem; text-align: left;">Valor Evaluado vs Referencia</th>
-                    <th style="padding: 0.65rem 0.8rem; text-align: center;">Estado en Vivo</th>
-                </tr>
-            </thead>
-            <tbody id="checklist-table-body">
-                <tr>
-                    <td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-muted);">
-                        <i class="fa-solid fa-circle-notch fa-spin"></i> Evaluando parámetros en tiempo real...
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+    <!-- Contenedor Dinámico de Checklist de Condiciones (Entrada con RAMA 1 / RAMA 2 o Salida) -->
+    <div id="checklist-content-area">
+        <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+            <i class="fa-solid fa-circle-notch fa-spin"></i> Evaluando parámetros en tiempo real...
+        </div>
     </div>
 
     <!-- Banner de Resumen de Señal y Filtro ML -->
@@ -596,7 +582,7 @@
 
             const badgeHeader = document.getElementById('checklist-header-status-badge');
             const titleElem = document.getElementById('checklist-title');
-            const tbody = document.getElementById('checklist-table-body');
+            const contentArea = document.getElementById('checklist-content-area');
             const footerBanner = document.getElementById('checklist-footer-banner');
 
             if (data.has_open_position) {
@@ -604,10 +590,20 @@
                 badgeHeader.innerHTML = `<span class="badge badge-danger" style="font-weight: bold; padding: 0.3rem 0.6rem;"><i class="fa-solid fa-shield"></i> MONITOREANDO SALIDA</span>`;
                 
                 const checklist = data.exit_checklist || [];
+                let exitHtml = `<div style="overflow-x: auto;"><table style="width: 100%; border-collapse: collapse; font-size: 0.88rem;">
+                    <thead>
+                        <tr style="background: rgba(15, 23, 42, 0.6); color: var(--text-muted); border-bottom: 1px solid rgba(255,255,255,0.08);">
+                            <th style="padding: 0.65rem 0.8rem; text-align: left;">Parámetro / Regla Técnica</th>
+                            <th style="padding: 0.65rem 0.8rem; text-align: center;">Operador</th>
+                            <th style="padding: 0.65rem 0.8rem; text-align: left;">Valor Evaluado vs Referencia</th>
+                            <th style="padding: 0.65rem 0.8rem; text-align: center;">Estado en Vivo</th>
+                        </tr>
+                    </thead><tbody>`;
+                
                 if (checklist.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">Sin reglas de salida configuradas para el Perfil ${data.profile}</td></tr>`;
+                    exitHtml += `<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">Sin reglas de salida configuradas para el Perfil ${data.profile}</td></tr>`;
                 } else {
-                    tbody.innerHTML = checklist.map(c => `
+                    exitHtml += checklist.map(c => `
                         <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);">
                             <td style="padding: 0.65rem 0.8rem; font-weight: 500; color: #cbd5e1;">${c.var1_label}</td>
                             <td style="padding: 0.65rem 0.8rem; text-align: center; color: var(--primary); font-weight: bold;">${c.op_str}</td>
@@ -622,6 +618,8 @@
                             </td>
                         </tr>`).join('');
                 }
+                exitHtml += `</tbody></table></div>`;
+                contentArea.innerHTML = exitHtml;
 
                 if (data.exit_any_passed) {
                     footerBanner.innerHTML = `
@@ -640,45 +638,111 @@
                 titleElem.innerHTML = `<i class="fa-solid fa-right-to-bracket" style="color: #10b981;"></i> Evaluación de Condiciones de ENTRADA (Compra)`;
                 badgeHeader.innerHTML = `<span class="badge badge-success" style="font-weight: bold; padding: 0.3rem 0.6rem;"><i class="fa-solid fa-radar fa-spin"></i> MONITOREANDO ENTRADA</span>`;
 
-                const checklist = data.entry_checklist || [];
-                if (checklist.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">Sin reglas de entrada configuradas para el Perfil ${data.profile}</td></tr>`;
-                } else {
-                    tbody.innerHTML = checklist.map(c => {
-                        const isML = c.is_ml;
-                        const rowStyle = isML ? 'background: rgba(168, 85, 247, 0.08); border-bottom: 1px solid rgba(168, 85, 247, 0.2);' : 'border-bottom: 1px solid rgba(255,255,255,0.04);';
-                        const labelHtml = isML ? `<span style="color: #e9d5ff; font-weight: bold;"><i class="fa-solid fa-brain" style="color: #c084fc;"></i> ${c.var1_label}</span>` : `${c.var1_label}`;
-                        
-                        return `
-                        <tr style="${rowStyle}">
-                            <td style="padding: 0.65rem 0.8rem; font-weight: 500; color: #cbd5e1;">${labelHtml}</td>
-                            <td style="padding: 0.65rem 0.8rem; text-align: center; color: ${isML ? '#c084fc' : 'var(--primary)'}; font-weight: bold;">${c.op_str}</td>
-                            <td style="padding: 0.65rem 0.8rem; color: #e2e8f0; font-family: monospace;">
-                                <strong style="color: ${isML ? '#c084fc' : '#38bdf8'};">${c.val1_str}</strong> <span style="color: var(--text-muted);">vs</span> <strong>${c.v2_label} (${c.val2_str})</strong>
-                            </td>
-                            <td style="padding: 0.65rem 0.8rem; text-align: center;">
-                                ${c.passed ? 
-                                    `<span class="badge badge-success" style="font-weight: bold; padding: 0.25rem 0.6rem;"><i class="fa-solid fa-check"></i> CUMPLIDA (SI)</span>` : 
-                                    `<span class="badge badge-danger" style="font-weight: 500; padding: 0.25rem 0.55rem;"><i class="fa-solid fa-xmark"></i> NO CUMPLIDA</span>`
-                                }
-                            </td>
-                        </tr>`;
-                    }).join('');
-                }
+                const branches = data.entry_branches || {};
+                const r1 = branches.rama1 || { passed: false, items: [] };
+                const r2 = branches.rama2 || { passed: false, items: [] };
+                const ml = branches.ml_filter || { passed: false, confidence: 50.0, threshold: 47.0 };
 
-                const allPassed = checklist.length > 0 && checklist.every(c => c.passed);
+                let html = `
+                <!-- Banner Explicativo de la Regla Global de Entrada -->
+                <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1.25rem; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                    <div>
+                        <span style="color: var(--text-muted);">Estructura de Compra:</span>
+                        <strong style="color: #38bdf8; margin-left: 0.4rem;">( RAMA 1  <span style="color: #f59e0b;">ó</span>  RAMA 2 )  <span style="color: #a855f7;">y</span>  FILTRO IA</strong>
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);">
+                        Basta con que se cumpla <strong>RAMA 1 O RAMA 2</strong> + el <strong>Filtro ML</strong> para ejecutar la compra.
+                    </div>
+                </div>
 
-                if (allPassed) {
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem; margin-bottom: 1.25rem;">
+                    <!-- TARJETA RAMA 1 -->
+                    <div style="border: 1px solid ${r1.passed ? '#10b981' : 'rgba(255,255,255,0.08)'}; background: ${r1.passed ? 'rgba(16, 185, 129, 0.08)' : 'rgba(30, 41, 59, 0.4)'}; border-radius: 10px; padding: 1rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 0.5rem;">
+                            <div style="font-weight: bold; color: #fff; font-size: 0.95rem;">
+                                <i class="fa-solid fa-rocket" style="color: #38bdf8;"></i> RAMA 1: Cruce Inicial
+                            </div>
+                            ${r1.passed ? 
+                                `<span class="badge badge-success" style="font-weight: bold; font-size: 0.78rem; padding: 0.25rem 0.55rem;"><i class="fa-solid fa-circle-check"></i> CUMPLIDA</span>` : 
+                                `<span class="badge badge-secondary" style="background: rgba(100, 116, 139, 0.2); color: #cbd5e1; font-size: 0.78rem; padding: 0.25rem 0.55rem;"><i class="fa-solid fa-circle-xmark"></i> NO ACTIVADA</span>`
+                            }
+                        </div>
+                        <div style="font-size: 0.82rem; display: flex; flex-direction: column; gap: 0.65rem;">
+                            ${r1.items.map(it => `
+                                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(15, 23, 42, 0.5); padding: 0.55rem 0.75rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.04);">
+                                    <span style="color: #cbd5e1;">${it.label}</span>
+                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <span style="font-family: monospace; font-size: 0.8rem; color: #94a3b8;">${it.val_str}</span>
+                                        ${it.passed ? '<i class="fa-solid fa-circle-check" style="color: #10b981;"></i>' : '<i class="fa-solid fa-circle-xmark" style="color: #64748b;"></i>'}
+                                    </div>
+                                </div>`).join('')}
+                        </div>
+                    </div>
+
+                    <!-- TARJETA RAMA 2 -->
+                    <div style="border: 1px solid ${r2.passed ? '#10b981' : 'rgba(255,255,255,0.08)'}; background: ${r2.passed ? 'rgba(16, 185, 129, 0.08)' : 'rgba(30, 41, 59, 0.4)'}; border-radius: 10px; padding: 1rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 0.5rem;">
+                            <div style="font-weight: bold; color: #fff; font-size: 0.95rem;">
+                                <i class="fa-solid fa-rotate-right" style="color: #f59e0b;"></i> RAMA 2: Re-Entrada por Impulso
+                            </div>
+                            ${r2.passed ? 
+                                `<span class="badge badge-success" style="font-weight: bold; font-size: 0.78rem; padding: 0.25rem 0.55rem;"><i class="fa-solid fa-circle-check"></i> CUMPLIDA</span>` : 
+                                `<span class="badge badge-secondary" style="background: rgba(100, 116, 139, 0.2); color: #cbd5e1; font-size: 0.78rem; padding: 0.25rem 0.55rem;"><i class="fa-solid fa-circle-xmark"></i> NO ACTIVADA</span>`
+                            }
+                        </div>
+                        <div style="font-size: 0.82rem; display: flex; flex-direction: column; gap: 0.65rem;">
+                            ${r2.items.map(it => `
+                                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(15, 23, 42, 0.5); padding: 0.55rem 0.75rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.04);">
+                                    <span style="color: #cbd5e1;">${it.label}</span>
+                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <span style="font-family: monospace; font-size: 0.8rem; color: #94a3b8;">${it.val_str}</span>
+                                        ${it.passed ? '<i class="fa-solid fa-circle-check" style="color: #10b981;"></i>' : '<i class="fa-solid fa-circle-xmark" style="color: #64748b;"></i>'}
+                                    </div>
+                                </div>`).join('')}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TARJETA FILTRO MACHINE LEARNING (IA) -->
+                <div style="border: 1px solid ${ml.passed ? '#a855f7' : 'rgba(255,255,255,0.08)'}; background: ${ml.passed ? 'rgba(168, 85, 247, 0.08)' : 'rgba(30, 41, 59, 0.4)'}; border-radius: 10px; padding: 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <div style="font-weight: bold; color: #e9d5ff; font-size: 0.95rem;">
+                                <i class="fa-solid fa-brain" style="color: #c084fc;"></i> ${ml.title}
+                            </div>
+                            <span style="font-size: 0.83rem; color: var(--text-muted);">
+                                Certeza Evaluada: <strong style="color: #c084fc;">${ml.confidence}%</strong> vs Umbral Mínimo: <strong>${ml.threshold}%</strong>
+                            </span>
+                        </div>
+                        <div>
+                            ${ml.passed ? 
+                                `<span class="badge" style="background: rgba(168, 85, 247, 0.25); color: #e9d5ff; border: 1px solid #a855f7; font-weight: bold; font-size: 0.78rem; padding: 0.25rem 0.55rem;"><i class="fa-solid fa-check"></i> IA APROBADA (${ml.confidence}%)</span>` : 
+                                `<span class="badge badge-danger" style="font-size: 0.78rem; padding: 0.25rem 0.55rem;"><i class="fa-solid fa-xmark"></i> IA RECHAZADA (${ml.confidence}%)</span>`
+                            }
+                        </div>
+                    </div>
+                </div>`;
+
+                contentArea.innerHTML = html;
+
+                const technicalPassed = r1.passed || r2.passed;
+                const buyActivated = technicalPassed && ml.passed;
+
+                if (buyActivated) {
                     footerBanner.innerHTML = `
                         <div style="padding: 0.85rem 1.1rem; border: 1px solid #10b981; background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border-radius: 8px; font-weight: bold; display: flex; align-items: center; gap: 0.75rem;">
                             <i class="fa-solid fa-circle-check" style="font-size: 1.4rem; color: #10b981;"></i>
                             <div>
-                                <div>¡TODAS LAS CONDICIONES CUMPLIDAS (INCLUYENDO FILTRO ML)!</div>
-                                <div style="font-size: 0.82rem; font-weight: normal; margin-top: 0.15rem; color: #a7f3d0;">Reglas técnicas y Filtro de Machine Learning aprobados. El bot ejecutará la compra.</div>
+                                <div>¡SEÑAL DE COMPRA ACTIVADA!</div>
+                                <div style="font-size: 0.82rem; font-weight: normal; margin-top: 0.15rem; color: #a7f3d0;">Se cumplió la ${r1.passed ? 'RAMA 1 (Cruce Inicial)' : 'RAMA 2 (Re-Entrada)'} y fue APROBADA por el Filtro ML (${ml.confidence}%). El bot ejecutará la orden.</div>
                             </div>
                         </div>`;
                 } else {
-                    footerBanner.innerHTML = '';
+                    footerBanner.innerHTML = `
+                        <div style="padding: 0.75rem 1rem; border: 1px solid rgba(100, 116, 139, 0.25); background: rgba(15, 23, 42, 0.5); color: #cbd5e1; border-radius: 8px; font-size: 0.83rem; display: flex; align-items: center; gap: 0.65rem;">
+                            <i class="fa-solid fa-radar" style="color: #38bdf8; font-size: 1.1rem;"></i>
+                            <span>Monitoreando en tiempo real: Se requiere (RAMA 1 ó RAMA 2) + Filtro ML para activar la compra. ${technicalPassed && !ml.passed ? '⚠️ Regla técnica cumplida pero omitida por Filtro ML.' : ''}</span>
+                        </div>`;
                 }
             }
 

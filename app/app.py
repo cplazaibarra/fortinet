@@ -12,6 +12,7 @@ CHILE_TZ = ZoneInfo("America/Santiago")
 # Importar módulos del proyecto
 import database
 from alpaca_client import AlpacaClient
+from binance_client import BinanceClient
 import ml_engine
 import indicators
 import sync_worker
@@ -1125,24 +1126,59 @@ def api_dashboard_status():
         entry_checklist = build_rules_checklist(klines, entry_rules, is_exit=False)
         exit_checklist = build_rules_checklist(klines, exit_rules, is_exit=True, open_position=open_pos)
 
-        entry_all_passed = all(item['passed'] for item in entry_checklist) if entry_checklist else False
+        entry_all_passed, entry_eval_reason = evaluate_rules(klines, entry_rules, is_exit=False)
         exit_any_passed = any(item['passed'] for item in exit_checklist) if exit_checklist else False
 
         ml_approve, ml_conf = ml_engine.predict_candle(last_candle, profile=profile)
         thresh_key = f'ml_threshold_pct_{profile}' if profile == 2 else 'ml_threshold_pct'
         ml_thresh = float(settings.get(thresh_key, settings.get('ml_threshold_pct', 50.0)))
 
-        # Agregar Filtro ML como 5ta condición en la tabla checklist
-        entry_checklist.append({
-            'var1_label': 'Filtro Machine Learning (IA)',
-            'op_str': '>=',
-            'v2_label': 'Umbral Mínimo ML',
-            'val1_str': f"{ml_conf:.1f}% Certeza",
-            'val2_str': f"{ml_thresh:.1f}%",
-            'passed': ml_approve,
-            'is_ml': True,
-            'description': f"Filtro ML ({ml_conf:.1f}%) >= Umbral Mínimo ({ml_thresh:.1f}%)"
-        })
+        # Evaluaciones detalladas para la UI estructurada en RAMA 1 y RAMA 2
+        c0 = klines[-1]
+        c1 = klines[-2]
+        macd_c0 = get_variable_value(c0, 'macd', klines=klines) or 0
+        sig_c0 = get_variable_value(c0, 'macd_signal', klines=klines) or 0
+        macd_c1 = get_variable_value(c1, 'macd', klines=klines[:-1]) or 0
+        sig_c1 = get_variable_value(c1, 'macd_signal', klines=klines[:-1]) or 0
+        rsi_c0 = get_variable_value(c0, 'rsi14', klines=klines) or 50
+        rsi_c1 = get_variable_value(c1, 'rsi14', klines=klines[:-1]) or 50
+        ema9_c0 = get_variable_value(c0, 'ema9', klines=klines) or 0
+        ema21_c0 = get_variable_value(c0, 'ema21', klines=klines) or 0
+
+        r1_c1 = (macd_c1 <= sig_c1) and (macd_c0 > sig_c0)
+        r1_c2 = rsi_c0 > 45.0
+        rama1_passed = r1_c1 and r1_c2
+
+        r2_c1 = macd_c0 > sig_c0
+        r2_c2 = ema9_c0 > ema21_c0
+        r2_c3 = (rsi_c1 <= 50.0) and (rsi_c0 > 50.0)
+        rama2_passed = r2_c1 and r2_c2 and r2_c3
+
+        entry_branches = {
+            'rama1': {
+                'title': 'RAMA 1: Entrada por Cruce Inicial',
+                'passed': rama1_passed,
+                'items': [
+                    {'label': 'MACD Line Cruza por encima de Signal', 'val_str': f"{macd_c0:.2f} vs Signal ({sig_c0:.2f})", 'passed': r1_c1},
+                    {'label': 'RSI (14) > 45.0', 'val_str': f"{rsi_c0:.2f} vs 45.0", 'passed': r1_c2}
+                ]
+            },
+            'rama2': {
+                'title': 'RAMA 2: Re-Entrada por Impulso en Tendencia',
+                'passed': rama2_passed,
+                'items': [
+                    {'label': 'MACD Line por encima de Signal (Tendencia)', 'val_str': f"{macd_c0:.2f} > {sig_c0:.2f}", 'passed': r2_c1},
+                    {'label': 'Alineación de Medias (EMA9 > EMA21)', 'val_str': f"${ema9_c0:.2f} > ${ema21_c0:.2f}", 'passed': r2_c2},
+                    {'label': 'RSI (14) Cruza por encima de 50.0', 'val_str': f"{rsi_c0:.2f} (ant: {rsi_c1:.2f})", 'passed': r2_c3}
+                ]
+            },
+            'ml_filter': {
+                'title': 'Filtro Machine Learning (IA)',
+                'passed': ml_approve,
+                'confidence': round(ml_conf, 1),
+                'threshold': ml_thresh
+            }
+        }
 
         raw_trades = database.get_trades()
         recent_trades = []
@@ -1169,6 +1205,7 @@ def api_dashboard_status():
             'has_open_position': has_open,
             'open_position': open_pos_info,
             'entry_checklist': entry_checklist,
+            'entry_branches': entry_branches,
             'entry_all_passed': entry_all_passed,
             'ml_prediction': {
                 'approve': ml_approve,
