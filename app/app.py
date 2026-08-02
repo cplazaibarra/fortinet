@@ -197,9 +197,12 @@ def evaluate_rules(klines, rules, is_exit=False):
 
 def get_open_position(min_usdt_threshold=2.0):
     """Busca si hay una operación de compra abierta (que no tenga venta asociada).
-    Si el valor acumulado en USDT de la posición es menor a $2.0 USDT (polvo/residuo),
-    se considera como NINGUNA posición abierta para permitir nuevas entradas."""
+    Si el valor acumulado en USDT de la posición en acciones es menor a $2.0 USDT (polvo/remanente/residuo),
+    se considera explícitamente que NO hay posición abierta para evitar bloqueos."""
     trades = database.get_trades()
+    if not trades:
+        return None
+
     buys = {}
     sells = {}
     for t in trades:
@@ -213,7 +216,16 @@ def get_open_position(min_usdt_threshold=2.0):
     for tg, buy_trade in buys.items():
         if tg not in sells:
             usdt_val = float(buy_trade.get('usdt_value', 0.0))
-            if usdt_val < min_usdt_threshold:
+            amount_ftnt = float(buy_trade.get('amount', 0.0))
+            
+            # Obtener precio más reciente para valuación exacta en tiempo real
+            klines = database.get_candles_15m(limit=1)
+            price = float(klines[-1]['close']) if klines else float(buy_trade.get('price', 0.0))
+            current_value_usd = amount_ftnt * price if price > 0 else usdt_val
+
+            # Si la posición en acciones vale menos de $2.00 USD, considerar SIN POSICION
+            if usdt_val < min_usdt_threshold or current_value_usd < min_usdt_threshold:
+                database.add_log(f"Remanente en acciones por ajuste de cambio detectado (${current_value_usd:.2f} USD < ${min_usdt_threshold:.2f} USD). Posición ignorada (LIBRE).", "WARNING")
                 continue
             return buy_trade
     return None
