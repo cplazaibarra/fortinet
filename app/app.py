@@ -188,6 +188,8 @@ def bot_worker():
     print("Hilo secundario del Bot de Trading iniciado.")
     database.add_log("Hilo de trading del bot iniciado en segundo plano", "INFO")
     
+    last_processed_entry_ts = {}
+    
     while True:
         try:
             # Obtener configuraciones actualizadas
@@ -221,7 +223,7 @@ def bot_worker():
             open_position = get_open_position()
             
             if open_position:
-                # Buscar reglas de salida del perfil activo
+                # Buscar reglas de salida del perfil activo (Evaluación en TIEMPO REAL cada 15s)
                 exit_rules = database.get_strategy('exit', profile=active_profile)
                 
                 # Calcular precio máximo alcanzado durante la posición activa y % caída desde el pico
@@ -237,37 +239,46 @@ def bot_worker():
                 current_candle['pnl_pct'] = ((current_price - open_position['price']) / open_position['price']) * 100.0
                 current_candle['trailing_drop_pct'] = ((current_price - peak_price) / peak_price) * 100.0 if peak_price > 0 else 0.0
                 
-                # Evaluar salida
+                # Evaluar salida en tiempo real
                 exit_passed, exit_reason = evaluate_rules(klines, exit_rules, is_exit=True)
                 if exit_passed:
                     print(f"--- ¡CONDICION DE SALIDA (PERFIL {active_profile}) CUMPLIDA! ({exit_reason}) ---")
                     execute_sell(client, current_price, open_position, reason=f"P{active_profile}: {exit_reason}")
             else:
-                # Buscar reglas de entrada del perfil activo
-                entry_rules = database.get_strategy('entry', profile=active_profile)
+                # ENTRADA: Evaluar ÚNICAMENTE con velas de 15m 100% CERRADAS
+                now_ms = int(time.time() * 1000)
+                closed_klines = [k for k in klines if (int(k['time']) + 900000) <= now_ms]
                 
-                # Evaluar entrada
-                entry_passed, entry_reason = evaluate_rules(klines, entry_rules, is_exit=False)
-                if entry_passed:
-                    # Consultar el filtro de Machine Learning del perfil activo antes de ejecutar la compra
-                    ml_approve, ml_conf = ml_engine.predict_candle(current_candle, profile=active_profile)
-                    if ml_approve:
-                        full_entry_reason = f"P{active_profile}: {entry_reason} + ML P{active_profile} Aprobado ({ml_conf}% conf)"
-                        print(f"--- ¡CONDICION DE ENTRADA Y FILTRO ML (PERFIL {active_profile}) APROBADOS! ({full_entry_reason}) ---")
-                        database.add_log(f"Señal de COMPRA (Perfil {active_profile}) detectada: {full_entry_reason}.", "INFO")
-                        execute_buy(client, current_price, reason=full_entry_reason)
-                    else:
-                        filter_reason = f"P{active_profile}: {entry_reason} | Omitida por ML P{active_profile} ({ml_conf}% conf)"
-                        database.add_log(f"Señal técnica Perfil {active_profile} detectada ({entry_reason}) pero FILTRADA por ML Perfil {active_profile} ({ml_conf}% confianza). Compra omitida.", "WARNING")
+                if closed_klines:
+                    last_closed_candle = closed_klines[-1]
+                    closed_ts = int(last_closed_candle['time'])
+                    
+                    # Evitar re-evaluar repetidamente la misma vela cerrada
+                    if last_processed_entry_ts.get(active_profile) != closed_ts:
+                        entry_rules = database.get_strategy('entry', profile=active_profile)
                         
-                        # Guardar la señal técnica rechazada por ML en la tabla trades
-                        last_trade = database.get_last_trade()
-                        now_ms = int(time.time() * 1000)
-                        # Evitar agregar duplicados continuos para la misma vela (desfase de 15 minutos / 900,000 ms)
-                        if not last_trade or last_trade.get('type') != 'SIGNAL_REJECTED' or (now_ms - last_trade.get('timestamp', 0)) > 900000:
-                            trade_size_usd = float(settings.get('trade_size_usd', 100.0))
-                            amount_ftnt = round(trade_size_usd / current_price, 5) if current_price > 0 else 0.0
-                            database.add_trade('SIGNAL_REJECTED', current_time_ms or now_ms, current_price, amount_ftnt, trade_size_usd, trade_group=now_ms, mode='AUTO', reason=filter_reason)
+                        # Evaluar entrada sobre el historial de velas cerradas
+                        entry_passed, entry_reason = evaluate_rules(closed_klines, entry_rules, is_exit=False)
+                        if entry_passed:
+                            # Consultar el filtro de Machine Learning del perfil activo sobre la vela cerrada
+                            ml_approve, ml_conf = ml_engine.predict_candle(last_closed_candle, profile=active_profile)
+                            if ml_approve:
+                                full_entry_reason = f"P{active_profile}: {entry_reason} + ML P{active_profile} Aprobado ({ml_conf}% conf) [Vela Cerrada]"
+                                print(f"--- ¡CONDICION DE ENTRADA Y FILTRO ML (PERFIL {active_profile}) APROBADOS EN VELA CERRADA! ({full_entry_reason}) ---")
+                                database.add_log(f"Señal de COMPRA (Perfil {active_profile}) detectada en VELA CERRADA: {full_entry_reason}.", "INFO")
+                                execute_buy(client, current_price, reason=full_entry_reason)
+                            else:
+                                filter_reason = f"P{active_profile}: {entry_reason} | Omitida por ML P{active_profile} ({ml_conf}% conf) [Vela Cerrada]"
+                                database.add_log(f"Señal técnica Perfil {active_profile} detectada en vela cerrada ({entry_reason}) pero FILTRADA por ML Perfil {active_profile} ({ml_conf}% confianza). Compra omitida.", "WARNING")
+                                
+                                last_trade = database.get_last_trade()
+                                if not last_trade or last_trade.get('type') != 'SIGNAL_REJECTED' or (now_ms - last_trade.get('timestamp', 0)) > 900000:
+                                    trade_size_usd = float(settings.get('trade_size_usd', 100.0))
+                                    amount_ftnt = round(trade_size_usd / current_price, 5) if current_price > 0 else 0.0
+                                    database.add_trade('SIGNAL_REJECTED', closed_ts, current_price, amount_ftnt, trade_size_usd, trade_group=now_ms, mode='AUTO', reason=filter_reason)
+                        
+                        # Registrar esta vela cerrada como procesada para no duplicar en los siguientes chequeos de 15s
+                        last_processed_entry_ts[active_profile] = closed_ts
                     
         except Exception as e:
             print(f"Error en bot_worker: {e}")
