@@ -17,6 +17,7 @@ env/
 # Modelos ML entrenados (archivos binarios grandes)
 *.joblib
 *.pkl
+!app/*.joblib
 data/models/
 
 # Variables de entorno y secretos
