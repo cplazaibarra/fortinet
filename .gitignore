@@ -39,11 +39,13 @@ logs/
 .DS_Store
 Thumbs.db
 
-# Datos históricos (demasiado pesados para git)
-data/historical/
-data/*.csv
-data/*.json
-data/*.parquet
+# Datos históricos y archivos de backtest (demasiado pesados para git)
+data/
+*.parquet
+*.csv
+
+# Reportes HTML generados
+reports/
 
 # Docker local
 docker-compose.override.yml
@@ -51,5 +53,15 @@ docker-compose.override.yml
 # Jupyter notebooks checkpoints
 .ipynb_checkpoints/
 
-# Scripts de scratch
+# Scripts de scratch y debug
 app/scratch_*.py
+scratch_*.py
+backtest_*.py
+benchmark_*.py
+check_*.py
+test_*.py
+analyze_*.py
+download_*.py
+!download_ftnt_15m.py
+run_all.py
+debug_*.py
