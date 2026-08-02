@@ -6,11 +6,11 @@ import time
 from datetime import datetime, timezone
 
 # Parámetros de conexión a PostgreSQL
-DB_HOST = os.getenv("POSTGRES_HOST", "localhost")
-DB_PORT = os.getenv("POSTGRES_PORT", "5432")
-DB_NAME = os.getenv("POSTGRES_DB", "fortinet_db")
-DB_USER = os.getenv("POSTGRES_USER", "postgres")
-DB_PASS = os.getenv("POSTGRES_PASSWORD", "postgres")
+DB_HOST = os.getenv("POSTGRES_HOST") or os.getenv("DB_HOST", "localhost")
+DB_PORT = os.getenv("POSTGRES_PORT") or os.getenv("DB_PORT", "5432")
+DB_NAME = os.getenv("POSTGRES_DB") or os.getenv("DB_NAME", "fortinet_db")
+DB_USER = os.getenv("POSTGRES_USER") or os.getenv("DB_USER", "postgres")
+DB_PASS = os.getenv("POSTGRES_PASSWORD") or os.getenv("DB_PASSWORD", "postgres")
 
 def get_db_connection():
     return psycopg2.connect(
@@ -23,7 +23,17 @@ def get_db_connection():
 
 
 def init_db():
-    conn = get_db_connection()
+    conn = None
+    for attempt in range(10):
+        try:
+            conn = get_db_connection()
+            break
+        except Exception as e:
+            if attempt == 9:
+                raise e
+            print(f"Esperando a PostgreSQL ({DB_HOST}:{DB_PORT})... reintento {attempt + 1}/10")
+            time.sleep(2)
+            
     cursor = conn.cursor()
     
     # 1. Tabla de configuraciones
