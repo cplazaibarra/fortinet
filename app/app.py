@@ -1723,25 +1723,38 @@ def weekly_ml_retrain_worker():
 
 # ================= INICIALIZACIÓN =================
 
-if __name__ == '__main__':
-    # Inicializar Base de Datos primero
-    database.init_db()
-    
-    # Arrancar el hilo autónomo de sincronización en segundo plano
-    sync_thread = threading.Thread(target=sync_worker.run_sync_worker, daemon=True)
-    sync_thread.start()
-    
-    # Generar y guardar la simulación persistente de ambos perfiles en PostgreSQL
-    sim_thread = threading.Thread(target=update_all_persistent_simulations, daemon=True)
-    sim_thread.start()
+_workers_initialized = False
 
-    # Arrancar el hilo secundario del Bot
-    bot_thread = threading.Thread(target=bot_worker, daemon=True)
-    bot_thread.start()
-    
-    # Arrancar el hilo de re-entrenamiento semanal de ML (Domingos 5:00 PM Chile)
-    weekly_retrain_thread = threading.Thread(target=weekly_ml_retrain_worker, daemon=True)
-    weekly_retrain_thread.start()
-    
+def init_background_workers():
+    global _workers_initialized
+    if _workers_initialized:
+        return
+    _workers_initialized = True
+
+    try:
+        database.init_db()
+        
+        # Arrancar el hilo autónomo de sincronización en segundo plano
+        sync_thread = threading.Thread(target=sync_worker.run_sync_worker, daemon=True)
+        sync_thread.start()
+        
+        # Generar y guardar la simulación persistente de ambos perfiles en PostgreSQL
+        sim_thread = threading.Thread(target=update_all_persistent_simulations, daemon=True)
+        sim_thread.start()
+
+        # Arrancar el hilo secundario del Bot
+        bot_thread = threading.Thread(target=bot_worker, daemon=True)
+        bot_thread.start()
+        
+        # Arrancar el hilo de re-entrenamiento semanal de ML (Domingos 5:00 PM Chile)
+        weekly_retrain_thread = threading.Thread(target=weekly_ml_retrain_worker, daemon=True)
+        weekly_retrain_thread.start()
+    except Exception as e:
+        print(f"Error al inicializar hilos en segundo plano: {e}")
+
+# Inicializar trabajadores background tanto bajo Gunicorn como ejecuciones directas
+init_background_workers()
+
+if __name__ == '__main__':
     # Arrancar Servidor Flask en el puerto 5050 y accesible para toda la red
     app.run(host='0.0.0.0', port=5050, debug=False)
