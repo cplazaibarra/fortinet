@@ -5,6 +5,9 @@ import json
 import time
 from decimal import Decimal
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
+
+CHILE_TZ = ZoneInfo("America/Santiago")
 
 # Parámetros de conexión a PostgreSQL
 DB_HOST = os.getenv("POSTGRES_HOST") or os.getenv("DB_HOST", "localhost")
@@ -414,54 +417,59 @@ def upsert_candles_15m(candles):
     
     query = """
     INSERT INTO candles_15m (
-        time, open, high, low, close, volume,
-        ema9, ema9_slope, ema9_slope_pct,
-        ema21, ema21_slope, ema21_slope_pct,
-        ema35, ema35_slope, ema35_slope_pct,
-        ema50, ema50_slope, ema50_slope_pct,
-        ema100, ema100_slope, ema100_slope_pct,
-        ema200, ema200_slope, ema200_slope_pct,
-        rsi14, macd, macd_signal, macd_hist, atr14,
-        year_ml, month_ml, week_ml, day_ml, day_name_ml, hour_ml, minute_ml
+        timestamp, symbol, open, high, low, close, volume, trade_count, vwap,
+        ema_9, slope_ema9_pct, ema_21, slope_ema21_pct, ema_35, slope_ema35_pct,
+        ema_50, slope_ema50_pct, ema_100, slope_ema100_pct, ema_200, slope_ema200_pct,
+        rsi_14, macd, macd_signal, macd_hist, atr_14,
+        year_ml, month_ml, week_ml, day_ml, day_name_ml, hour_ml, minute_ml,
+        time, ema9, ema21, ema35, ema50, ema100, ema200, rsi14, atr14, ema9_slope, ema21_slope
     ) VALUES %s
-    ON CONFLICT (time) DO UPDATE SET
-        open = EXCLUDED.open,
-        high = EXCLUDED.high,
-        low = EXCLUDED.low,
-        close = EXCLUDED.close,
-        volume = EXCLUDED.volume,
-        ema9 = EXCLUDED.ema9, ema9_slope = EXCLUDED.ema9_slope, ema9_slope_pct = EXCLUDED.ema9_slope_pct,
-        ema21 = EXCLUDED.ema21, ema21_slope = EXCLUDED.ema21_slope, ema21_slope_pct = EXCLUDED.ema21_slope_pct,
-        ema35 = EXCLUDED.ema35, ema35_slope = EXCLUDED.ema35_slope, ema35_slope_pct = EXCLUDED.ema35_slope_pct,
-        ema50 = EXCLUDED.ema50, ema50_slope = EXCLUDED.ema50_slope, ema50_slope_pct = EXCLUDED.ema50_slope_pct,
-        ema100 = EXCLUDED.ema100, ema100_slope = EXCLUDED.ema100_slope, ema100_slope_pct = EXCLUDED.ema100_slope_pct,
-        ema200 = EXCLUDED.ema200, ema200_slope = EXCLUDED.ema200_slope, ema200_slope_pct = EXCLUDED.ema200_slope_pct,
-        rsi14 = EXCLUDED.rsi14,
-        macd = EXCLUDED.macd, macd_signal = EXCLUDED.macd_signal, macd_hist = EXCLUDED.macd_hist,
-        atr14 = EXCLUDED.atr14,
+    ON CONFLICT (symbol, timestamp) DO UPDATE SET
+        open = EXCLUDED.open, high = EXCLUDED.high, low = EXCLUDED.low, close = EXCLUDED.close, volume = EXCLUDED.volume,
+        trade_count = EXCLUDED.trade_count, vwap = EXCLUDED.vwap,
+        ema_9 = EXCLUDED.ema_9, slope_ema9_pct = EXCLUDED.slope_ema9_pct,
+        ema_21 = EXCLUDED.ema_21, slope_ema21_pct = EXCLUDED.slope_ema21_pct,
+        ema_35 = EXCLUDED.ema_35, slope_ema35_pct = EXCLUDED.slope_ema35_pct,
+        ema_50 = EXCLUDED.ema_50, slope_ema50_pct = EXCLUDED.slope_ema50_pct,
+        ema_100 = EXCLUDED.ema_100, slope_ema100_pct = EXCLUDED.slope_ema100_pct,
+        ema_200 = EXCLUDED.ema_200, slope_ema200_pct = EXCLUDED.slope_ema200_pct,
+        rsi_14 = EXCLUDED.rsi_14, macd = EXCLUDED.macd, macd_signal = EXCLUDED.macd_signal, macd_hist = EXCLUDED.macd_hist, atr_14 = EXCLUDED.atr_14,
         year_ml = EXCLUDED.year_ml, month_ml = EXCLUDED.month_ml, week_ml = EXCLUDED.week_ml,
-        day_ml = EXCLUDED.day_ml, day_name_ml = EXCLUDED.day_name_ml, hour_ml = EXCLUDED.hour_ml, minute_ml = EXCLUDED.minute_ml;
+        day_ml = EXCLUDED.day_ml, day_name_ml = EXCLUDED.day_name_ml, hour_ml = EXCLUDED.hour_ml, minute_ml = EXCLUDED.minute_ml,
+        time = EXCLUDED.time, ema9 = EXCLUDED.ema9, ema21 = EXCLUDED.ema21, ema35 = EXCLUDED.ema35, ema50 = EXCLUDED.ema50,
+        ema100 = EXCLUDED.ema100, ema200 = EXCLUDED.ema200, rsi14 = EXCLUDED.rsi14, atr14 = EXCLUDED.atr14,
+        ema9_slope = EXCLUDED.ema9_slope, ema21_slope = EXCLUDED.ema21_slope;
     """
     
     days_es = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
     tuples = []
     for c in candles:
         dt = datetime.fromtimestamp(c['time'] / 1000.0, tz=CHILE_TZ)
+        dt_utc = datetime.fromtimestamp(c['time'] / 1000.0, tz=timezone.utc)
         iso_year, iso_week, iso_day = dt.isocalendar()
         day_name = days_es[dt.weekday()]
+        symbol = c.get('symbol', 'FTNT')
+        
         tuples.append((
-            c['time'], c['open'], c['high'], c['low'], c['close'], c['volume'],
-            c.get('ema9'), c.get('ema9_slope'), c.get('ema9_slope_pct'),
-            c.get('ema21'), c.get('ema21_slope'), c.get('ema21_slope_pct'),
-            c.get('ema35'), c.get('ema35_slope'), c.get('ema35_slope_pct'),
-            c.get('ema50'), c.get('ema50_slope'), c.get('ema50_slope_pct'),
-            c.get('ema100'), c.get('ema100_slope'), c.get('ema100_slope_pct'),
-            c.get('ema200'), c.get('ema200_slope'), c.get('ema200_slope_pct'),
+            dt_utc, symbol, c['open'], c['high'], c['low'], c['close'], c['volume'],
+            c.get('trade_count', 0), c.get('vwap', c['close']),
+            c.get('ema9'), c.get('ema9_slope_pct', c.get('ema9_slope')),
+            c.get('ema21'), c.get('ema21_slope_pct', c.get('ema21_slope')),
+            c.get('ema35'), c.get('ema35_slope_pct', c.get('ema35_slope')),
+            c.get('ema50'), c.get('ema50_slope_pct', c.get('ema50_slope')),
+            c.get('ema100'), c.get('ema100_slope_pct', c.get('ema100_slope')),
+            c.get('ema200'), c.get('ema200_slope_pct', c.get('ema200_slope')),
             c.get('rsi14'), c.get('macd'), c.get('macd_signal'), c.get('macd_hist'), c.get('atr14'),
-            dt.year, dt.month, iso_week, dt.day, day_name, dt.hour, dt.minute
+            dt.year, dt.month, iso_week, dt.day, day_name, dt.hour, dt.minute,
+            c['time'], c.get('ema9'), c.get('ema21'), c.get('ema35'), c.get('ema50'),
+            c.get('ema100'), c.get('ema200'), c.get('rsi14'), c.get('atr14'),
+            c.get('ema9_slope'), c.get('ema21_slope')
         ))
         
     execute_values(cursor, query, tuples)
+    conn.commit()
+    cursor.close()
+    conn.close()
     
     query_ohlcv = """
     INSERT INTO ohlcv_15m (
