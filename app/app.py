@@ -31,8 +31,35 @@ def add_header(response):
 bot_thread = None
 
 def get_variable_value(candle, var_name, klines=None):
-    """Obtiene el valor de una variable de la vela (ej. 'close', 'ema9', 'ema9_slope_pct', 'vol_ratio', 'bb_pct', 'tp_pct')."""
+    """Obtiene el valor de una variable de la vela (ej. 'close', 'ema9', 'rsi14', etc.)."""
     val = candle.get(var_name)
+    if val is None:
+        alt_map = {
+            'ema9': 'ema_9',
+            'ema21': 'ema_21',
+            'ema35': 'ema_35',
+            'ema50': 'ema_50',
+            'ema100': 'ema_100',
+            'ema200': 'ema_200',
+            'rsi14': 'rsi_14',
+            'atr14': 'atr_14',
+            'ema9_slope': 'slope_ema9_pct',
+            'ema9_slope_pct': 'slope_ema9_pct',
+            'ema21_slope': 'slope_ema21_pct',
+            'ema21_slope_pct': 'slope_ema21_pct',
+            'ema35_slope': 'slope_ema35_pct',
+            'ema35_slope_pct': 'slope_ema35_pct',
+            'ema50_slope': 'slope_ema50_pct',
+            'ema50_slope_pct': 'slope_ema50_pct',
+            'ema100_slope': 'slope_ema100_pct',
+            'ema100_slope_pct': 'slope_ema100_pct',
+            'ema200_slope': 'slope_ema200_pct',
+            'ema200_slope_pct': 'slope_ema200_pct',
+        }
+        alt_key = alt_map.get(var_name)
+        if alt_key:
+            val = candle.get(alt_key)
+
     if val is not None:
         return float(val)
 
@@ -135,9 +162,10 @@ def evaluate_rules(klines, rules, is_exit=False):
         
         # Manejo especial para Trailing Stop Loss (% Caída desde Máximo)
         if var1 == 'trailing_drop_pct':
-            drop_mag = abs(v1_c0)
             target_drop = abs(val2)
-            rule_passed = (drop_mag >= target_drop) if op in ['gte', 'gt', 'lte', 'lt'] else False
+            # v1_c0 es un porcentaje negativo (ej. -2.5% para una caída de 2.5%).
+            # Se cumple la salida si la caída acumulada en magnitud es mayor o igual al límite configurado (ej. 2.5% >= 2.0%)
+            rule_passed = (v1_c0 < 0) and (abs(v1_c0) >= target_drop)
         elif op == 'gt': # Mayor que
             rule_passed = v1_c0 > v2_c0
         elif op == 'lt': # Menor que
@@ -1049,11 +1077,8 @@ def build_rules_checklist(klines, rules, is_exit=False, open_position=None):
             rule_passed = False
         else:
             if var1 == 'trailing_drop_pct':
-                drop_limit = -abs(val2)
-                if op in ['lt', 'lte']:
-                    rule_passed = v1_c0 <= drop_limit
-                elif op in ['gt', 'gte']:
-                    rule_passed = v1_c0 >= drop_limit
+                target_drop = abs(val2)
+                rule_passed = (v1_c0 < 0) and (abs(v1_c0) >= target_drop)
             elif op == 'gt':
                 rule_passed = v1_c0 > v2_c0
             elif op == 'lt':
