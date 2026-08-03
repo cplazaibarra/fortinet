@@ -3,6 +3,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor, execute_values
 import json
 import time
+from decimal import Decimal
 from datetime import datetime, timezone
 
 # Parámetros de conexión a PostgreSQL
@@ -553,7 +554,15 @@ def get_candles_15m_range(start_ts=None, end_ts=None, limit=300):
     rows = cursor.fetchall()
     cursor.close()
     conn.close()
-    return [dict(row) for row in rows]
+    
+    result = []
+    for r in rows:
+        d = dict(r)
+        for k, v in d.items():
+            if isinstance(v, Decimal):
+                d[k] = float(v)
+        result.append(d)
+    return result
 
 def get_candles_15m_paginated(page=1, per_page=50):
     """

@@ -291,8 +291,8 @@ def bot_worker():
                 continue
                 
             current_candle = klines[-1]
-            current_price = current_candle['close']
-            current_time_ms = current_candle['time']
+            current_price = float(current_candle['close'])
+            current_time_ms = int(current_candle['time'])
             
             # 3. Comprobar si hay una posición abierta
             open_position = get_open_position()
@@ -769,7 +769,7 @@ def api_manual_buy():
         klines = database.get_candles_15m(limit=5)
         if not klines:
             return jsonify({'success': False, 'message': 'No hay datos de precio disponibles.'})
-        current_price = klines[-1]['close']
+        current_price = float(klines[-1]['close'])
 
         # Verificar saldo suficiente
         if sim_mode:
@@ -831,7 +831,7 @@ def api_manual_sell_all():
         klines = database.get_candles_15m(limit=5)
         if not klines:
             return jsonify({'success': False, 'message': 'No hay datos de precio disponibles.'})
-        current_price = klines[-1]['close']
+        current_price = float(klines[-1]['close'])
 
         open_position = get_open_position()
 
