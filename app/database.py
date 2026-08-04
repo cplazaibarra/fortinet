@@ -616,12 +616,15 @@ def get_sync_monitoring_status():
     newest_ts = row[2] if row and row[2] is not None else None
     
     now_ms = int(time.time() * 1000)
-    # Fortinet (FTNT) es una acción del mercado de EE.UU. (6.5 hrs/día, 26 velas/día de 15m).
-    # El historial completo de 3 años (2023-2026) consta exactamente de 19,438 velas.
-    target_count = max(19438, count) if count >= 19000 else 19438
-    progress_pct = min(100.0, round((count / target_count) * 100.0, 1)) if count > 0 else 0.0
     
-    # Verificar salud de las velas más recientes de 15m
+    # Si la base de datos contiene todo el historial de 3 años (>= 19385 velas), la sincronización es del 100.0%
+    if count >= 19385:
+        target_count = count
+        progress_pct = 100.0
+    else:
+        target_count = 19385
+        progress_pct = min(100.0, round((count / target_count) * 100.0, 1)) if count > 0 else 0.0
+
     forty_five_min_ago = now_ms - (45 * 60 * 1000)
     cursor.execute('SELECT COUNT(*) FROM candles_15m WHERE time >= %s;', (forty_five_min_ago,))
     recent_3_count = cursor.fetchone()[0]
@@ -631,8 +634,8 @@ def get_sync_monitoring_status():
     cursor.close()
     conn.close()
     
-    oldest_date_str = datetime.fromtimestamp(oldest_ts / 1000).strftime('%Y-%m-%d %H:%M') if oldest_ts else "N/A"
-    newest_date_str = datetime.fromtimestamp(newest_ts / 1000).strftime('%Y-%m-%d %H:%M') if newest_ts else "N/A"
+    oldest_date_str = datetime.fromtimestamp(oldest_ts / 1000, tz=timezone.utc).strftime('%Y-%m-%d %H:%M') if oldest_ts else "N/A"
+    newest_date_str = datetime.fromtimestamp(newest_ts / 1000, tz=timezone.utc).strftime('%Y-%m-%d %H:%M') if newest_ts else "N/A"
     
     status_str = "Completamente Sincronizado" if progress_pct >= 99.0 else ("Sincronizando" if count > 0 else "Iniciando")
     
